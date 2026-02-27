@@ -21,7 +21,7 @@ class EditorWindow(QMainWindow):
 
         self.setMinimumHeight(500)
         self.setMinimumWidth(500)
-        self.setWindowIcon(QIcon("icons/logo.svg"))
+        self.setWindowIcon(QIcon(resource_path("icons/logo.svg")))
 
         self.setGeometry(200, 100, 1100, 750)
 
@@ -33,7 +33,7 @@ class EditorWindow(QMainWindow):
         self.editor.textChanged.connect(self.on_text_changed)
 
     def load_translation(self, lang_code: str):
-        path = os.path.join(os.path.dirname(__file__), "translations", f"{lang_code}.json")
+        path = resource_path(os.path.join("translations", f"{lang_code}.json"))
         try:
             with open(path, encoding="utf-8") as f:
                 self.trans = json.load(f)
@@ -187,48 +187,48 @@ class EditorWindow(QMainWindow):
 
         # Toolbar actions
         self.tb_run = QAction(self)
-        self.tb_run.setIcon(QIcon("icons/run.svg"))
+        self.tb_run.setIcon(QIcon(resource_path("icons/run.svg")))
         self.tb_run.triggered.connect(self.run_analysis)
 
         self.tb_new = QAction(self)
-        self.tb_new.setIcon(QIcon("icons/new.svg"))
+        self.tb_new.setIcon(QIcon(resource_path("icons/new.svg")))
         self.tb_new.triggered.connect(self.new_file)
 
         self.tb_open = QAction(self)
-        self.tb_open.setIcon(QIcon("icons/open.svg"))
+        self.tb_open.setIcon(QIcon(resource_path("icons/open.svg")))
         self.tb_open.triggered.connect(self.open_file)
 
         self.tb_save = QAction(self)
-        self.tb_save.setIcon(QIcon("icons/save.svg"))
+        self.tb_save.setIcon(QIcon(resource_path("icons/save.svg")))
         self.tb_save.triggered.connect(self.save_file)
 
         self.tb_undo = QAction(self)
-        self.tb_undo.setIcon(QIcon("icons/undo.svg"))
+        self.tb_undo.setIcon(QIcon(resource_path("icons/undo.svg")))
         self.tb_undo.triggered.connect(self.editor.undo)
 
         self.tb_redo = QAction(self)
-        self.tb_redo.setIcon(QIcon("icons/redo.svg"))
+        self.tb_redo.setIcon(QIcon(resource_path("icons/redo.svg")))
         self.tb_redo.triggered.connect(self.editor.redo)
 
         self.tb_cut = QAction(self)
-        self.tb_cut.setIcon(QIcon("icons/cut.svg"))
+        self.tb_cut.setIcon(QIcon(resource_path("icons/cut.svg")))
         self.tb_cut.triggered.connect(self.editor.cut)
 
         self.tb_copy = QAction(self)
-        self.tb_copy.setIcon(QIcon("icons/copy.svg"))
+        self.tb_copy.setIcon(QIcon(resource_path("icons/copy.svg")))
         self.tb_copy.triggered.connect(self.editor.copy)
 
         self.tb_paste = QAction(self)
-        self.tb_paste.setIcon(QIcon("icons/paste.svg"))
+        self.tb_paste.setIcon(QIcon(resource_path("icons/paste.svg")))
         self.tb_paste.triggered.connect(self.editor.paste)
 
         self.tb_help = QAction(self)
-        self.tb_help.setIcon(QIcon("icons/help.svg"))
+        self.tb_help.setIcon(QIcon(resource_path("icons/help.svg")))
         self.tb_help.triggered.connect(self.show_help)
         
 
         self.tb_about = QAction(self)
-        self.tb_about.setIcon(QIcon("icons/about.svg"))
+        self.tb_about.setIcon(QIcon(resource_path("icons/about.svg")))
         self.tb_about.triggered.connect(self.show_about)
 
     def create_menus(self):
@@ -416,6 +416,14 @@ class EditorWindow(QMainWindow):
             return
         self.output.append(f"Получен текст длиной {len(text)} символов.")
         self.output.append("Анализ завершён")
+
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 
 if __name__ == "__main__":
