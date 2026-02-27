@@ -39,6 +39,7 @@
 
 
    ```bash
-   
+   pyinstaller --onefile --windowed --add-data "icons;icons" --add-data "translations;translations" --name "TextEditor" --icon=logo.ico editor_window.py
+   ```
 
 
