@@ -31,5 +31,30 @@
   "cannot_save": "Could not save file",
   "about_title": "About",
   "about_text": "<h3>Specialized Text Editor</h3><p>GUI for language processor<br>Python + PyQt6<br><br>igor231223<br>2026",
-  "help_text": "Current features:\n• Create, open, save files\n• Standard editing operations\n• Save confirmation on close\n• Resizable panels\n• Language switching\n\n"
+  
+  "help_section_features": "📝 Main Features:",
+  "help_features": "• Create, open and save text files\n• UTF-8 encoding support\n• Syntax highlighting (Consolas)\n• Customizable tabulation",
+  "help_section_hotkeys": "⌨️ Hotkeys:",
+  "help_hotkeys": "• Ctrl+N - New file\n• Ctrl+O - Open file\n• Ctrl+S - Save\n• Ctrl+Shift+S - Save as\n• Ctrl+Z - Undo\n• Ctrl+Y - Redo\n• Ctrl+X - Cut\n• Ctrl+C - Copy\n• Ctrl+V - Paste\n• Ctrl+A - Select all\n• F5 - Run analysis\n• F1 - Help",
+  "help_section_analysis": "🔍 Analysis Function:",
+  "help_analysis": "The program performs basic analysis of entered text:\n• Empty text check\n• Character count\n• Words count\n• Lines count\n• Statistics output to bottom panel",
+  "help_section_i18n": "🌐 Internationalization:",
+  "help_i18n": "• Russian and English language support\n• Automatic interface update when switching language",
+  "help_section_interface": "🎨 Interface:",
+  "help_interface": "• Dual-panel interface (editor + output)\n• Adjustable panel sizes\n• Toolbar with icons\n• Tooltips for all buttons\n• Modern style with hover effects",
+  "help_section_additional": "💡 Additional Features:",
+  "help_additional": "• Unsaved changes warning\n• File status display in title\n• Panel splitter drag support",
+  "help_section_technical": "⚙️ Technical Details:",
+  "help_technical": "• Written in Python using PyQt6\n• Modular architecture\n• Easily extensible functionality\n• Cross-platform compatibility",
+  
+  "analysis_start": "🚀 Starting analysis...",
+  "analysis_empty": "⚠️ Empty text — nothing to analyze.",
+  "analysis_hint": "💡 Enter text in the top panel and press F5 or ▶️ button",
+  "analysis_results": "📊 <b>Analysis Results:</b>",
+  "analysis_separator": "━━━━━━━━━━━━━━━━━━━━━━",
+  "analysis_lines": "📝 Lines:",
+  "analysis_words": "🔤 Words:",
+  "analysis_chars": "📏 Characters:",
+  "analysis_chars_no_spaces": "📌 Characters (no spaces):",
+  "analysis_complete": "✅ Analysis completed successfully!"
 }

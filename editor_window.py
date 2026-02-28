@@ -85,7 +85,6 @@ class EditorWindow(QMainWindow):
         self.tb_new.setToolTip(self.tr("file_new"))
         self.tb_run.setToolTip(self.tr("run"))
 
-
         # Recreate menu + toolbar
         self.menuBar().clear()
         self.create_menus()
@@ -225,7 +224,6 @@ class EditorWindow(QMainWindow):
         self.tb_help = QAction(self)
         self.tb_help.setIcon(QIcon(resource_path("icons/help.svg")))
         self.tb_help.triggered.connect(self.show_help)
-        
 
         self.tb_about = QAction(self)
         self.tb_about.setIcon(QIcon(resource_path("icons/about.svg")))
@@ -305,7 +303,7 @@ class EditorWindow(QMainWindow):
                 background: rgba(255, 255, 255, 0.25)
             }
         """)
-        
+
     def switch_language(self, lang: str):
         if lang == self.current_lang:
             return
@@ -402,20 +400,54 @@ class EditorWindow(QMainWindow):
             event.ignore()
 
     def show_help(self):
-        QMessageBox.information(self, self.tr("help_help"), self.tr("help_text"))
+        help_text = self.get_detailed_help()
+        QMessageBox.information(self, self.tr("help_help"), help_text)
+
+    def get_detailed_help(self):
+        sections = [
+            ("help_section_features", "help_features"),
+            ("help_section_hotkeys", "help_hotkeys"),
+            ("help_section_analysis", "help_analysis"),
+            ("help_section_i18n", "help_i18n"),
+            ("help_section_interface", "help_interface"),
+            ("help_section_additional", "help_additional"),
+            ("help_section_technical", "help_technical")
+        ]
+        
+        help_parts = [f"<b>{self.tr('app_title')}</b><br><br>"]
+        
+        for section_key, content_key in sections:
+            section_title = self.tr(section_key)
+            content = self.tr(content_key).replace('\n', '<br>')
+            help_parts.append(f"{section_title}<br>{content}<br><br>")
+        
+        return ''.join(help_parts)
 
     def show_about(self):
         QMessageBox.about(self, self.tr("about_title"), self.tr("about_text"))
 
     def run_analysis(self):
         self.output.clear()
-        self.output.append("Запуск анализа...")
-        text = self.editor.toPlainText().strip()
-        if not text:
-            self.output.append("Текст пустой — анализировать нечего.")
+        self.output.append(self.tr("analysis_start"))
+        text = self.editor.toPlainText()
+        
+        if not text.strip():
+            self.output.append(self.tr("analysis_empty"))
+            self.output.append(self.tr("analysis_hint"))
             return
-        self.output.append(f"Получен текст длиной {len(text)} символов.")
-        self.output.append("Анализ завершён")
+        
+        lines = text.count('\n') + 1
+        chars = len(text)
+        words = len(text.split())
+        
+        self.output.append(self.tr("analysis_results"))
+        self.output.append(self.tr("analysis_separator"))
+        self.output.append(f"{self.tr('analysis_lines')} {lines}")
+        self.output.append(f"{self.tr('analysis_words')} {words}")
+        self.output.append(f"{self.tr('analysis_chars')} {chars}")
+        self.output.append(f"{self.tr('analysis_chars_no_spaces')} {len(text.replace(' ', ''))}")
+        self.output.append(self.tr("analysis_separator"))
+        self.output.append(self.tr("analysis_complete"))
 
 
 def resource_path(relative_path):
