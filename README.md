@@ -32,6 +32,7 @@
 Главное окно программы, верхняя часть которой - рабочая область, нижняя часть - вывод результатов (только для чтения)
 <img width="1366" height="968" alt="image" src="https://github.com/user-attachments/assets/b9f79602-7955-4662-80ee-db316ffcd82c" />
 
+<img width="1358" height="714" alt="Снимок экрана 2026-02-28 170035" src="https://github.com/user-attachments/assets/e22cd495-8886-43ef-9daf-a5d213e19d94" />
 В главном окне расположен тулбар, в котором слева направо располагаются:
 1. Пуск (Запускает анализатор)
 2. Новый (Создает новый файл)
@@ -44,25 +45,27 @@
 9. Вставить (Вставляет текст)
 10. Справка (Показывает возможности программы)
 11. О программе
-![Uploading image.png…]()
 
 В данной части расположено меню. 
-![Uploading image.png…]()
+<img width="1001" height="723" alt="Снимок экрана 2026-02-28 170527" src="https://github.com/user-attachments/assets/22fc4ad7-abe2-48e4-b199-6dfa9a40da8d" />
+
 
 Пункт "Файл" содержит следующие элементы:
-![Uploading image.png…]()
+<img width="559" height="297" alt="Снимок экрана 2026-02-28 170705" src="https://github.com/user-attachments/assets/3da61d18-fd22-4589-b382-bf1c0bd744c1" />
+
 
 Пункт "Правка" содержит следующие элементы:
-![Uploading image.png…]()
+<img width="608" height="280" alt="Снимок экрана 2026-02-28 170727" src="https://github.com/user-attachments/assets/9f612401-1217-4d70-9344-bc9df2f447b5" />
+
 
 Пункт "Пуск" содержит следующий элемент:
-![Uploading image.png…]()
+<img width="613" height="189" alt="Снимок экрана 2026-02-28 170814" src="https://github.com/user-attachments/assets/b94fe711-b6c6-4b08-b3ef-4edc8c0f90a6" />
 
 Пункт "Язык" содержит следующие элементы:
-![Uploading image.png…]()
+<img width="591" height="153" alt="Снимок экрана 2026-02-28 170831" src="https://github.com/user-attachments/assets/c0f24924-64d5-4f21-9e47-7113e51faf21" />
 
 Пункт "Справка" содержит следующие элементы:
-![Uploading image.png…]()
+<img width="616" height="197" alt="Снимок экрана 2026-02-28 170853" src="https://github.com/user-attachments/assets/3a94d965-1e84-4128-91e5-b98878372af2" />
 
 
 ## 4. Используемые технологии
