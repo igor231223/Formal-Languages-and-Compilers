@@ -37,9 +37,41 @@
 - **Среда разработки:** VS Code
 - **Сборка в исполняемый файл:** PyInstaller
 
+## 5. Инструкция по сборке и запуску
+
+### 5.1. Запуск из исходного кода (требуется Python)
+
+1. Убедитесь, что на компьютере установлен **Python 3.11 или выше**  
+2. Создайте и активируйте виртуальное окружение:
 
    ```bash
-   pyinstaller --onefile --windowed --add-data "icons;icons" --add-data "translations;translations" --name "TextEditor" --icon=logo.ico editor_window.py
+   python -m venv venv
    ```
+3. Установите все зависимости:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Запустите исполняемый файл:
+   ```bash
+   python editor_window.py
+   ```
+   
+### 5.2. Готовый исполняемый файл (Python не требуется)
+Для этого необходимо перейти в папку dist, найти файл TextEditor.exe и запустить его.
 
+Данный метод не требует установки Python и зависимостей
 
+### 5.2. Сборка исполняемого файла
+
+1. Установите PyInstaller (в активированном виртуальном окружении):
+```bash
+   pip install pyinstaller
+   ```
+2. Выполните команду сборки из корня проекта:
+```bash
+pyinstaller --onefile --windowed --add-data "icons;icons" --add-data "translations;translations" --name "TextEditor" editor_window.py
+```
+3. После завершеня установки найдите исполняемый файл, путь к нему:
+```bash
+dist\TextEditor.exe
+```
