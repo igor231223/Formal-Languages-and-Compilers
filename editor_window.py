@@ -10,8 +10,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem, QAbstractItemView, QLabel
 )
 
-# Импортируем сканер из нового модуля
-from scanner import Scanner, Token
+from scanner import Scanner
 
 class EditorWindow(QMainWindow):
     def __init__(self):
@@ -129,7 +128,14 @@ class EditorWindow(QMainWindow):
 
         self.output_table = QTableWidget()
         self.output_table.setColumnCount(4)
-        
+        self.output_table.setHorizontalHeaderLabels(
+            ["Условный код", "Тип лексемы", "Лексема", "Местоположение"]
+        )
+        self.output_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.output_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.output_table.verticalHeader().setVisible(False)
+        self.output_table.horizontalHeader().setStretchLastSection(True)
+        self.output_table.setFont(QFont("Consolas", 11))
         self.splitter.addWidget(self.output_table)
 
         self.splitter.setSizes([550, 200])
@@ -481,16 +487,6 @@ class EditorWindow(QMainWindow):
 
 
     def run_analysis(self):
-
-        self.output_table.setHorizontalHeaderLabels(
-            ["Условный код", "Тип лексемы", "Лексема", "Местоположение"]
-        )
-        self.output_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.output_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.output_table.verticalHeader().setVisible(False)
-        self.output_table.horizontalHeader().setStretchLastSection(True)
-        self.output_table.setFont(QFont("Consolas", 11))
-
         self.output_table.setRowCount(0)
         text = self.editor.toPlainText()
 
@@ -510,7 +506,7 @@ class EditorWindow(QMainWindow):
         for i, token in enumerate(tokens):
             location = f"{self.tr('status_line')} {token.line}, {token.start_pos}-{token.end_pos}"
             self.output_table.setItem(i, 0, QTableWidgetItem(str(token.code)))
-            self.output_table.setItem(i, 1, QTableWidgetItem(self.tr(token.type_name)))
+            self.output_table.setItem(i, 1, QTableWidgetItem(token.type_name))
             self.output_table.setItem(i, 2, QTableWidgetItem(token.lexeme))
             self.output_table.setItem(i, 3, QTableWidgetItem(location))
 

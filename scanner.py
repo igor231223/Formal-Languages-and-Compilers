@@ -84,7 +84,8 @@ class Scanner:
             else:
                 code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
                 return Token(code, type_name, char, self.line, start_pos, start_pos)
-        # оператор =
+            
+        # оператор присваивания и сравнения
         if char == '=':
             if self.match('='):
                 code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
