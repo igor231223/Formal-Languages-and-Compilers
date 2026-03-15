@@ -56,5 +56,7 @@
   "analysis_words": "🔤 Words:",
   "analysis_chars": "📏 Characters:",
   "analysis_chars_no_spaces": "📌 Characters (no spaces):",
-  "analysis_complete": "✅ Analysis completed successfully!"
+  "analysis_complete": "✅ Analysis completed successfully!",
+  "status_lines": "Lines:",
+  "status_code_lines": "Code lines:"
 }

@@ -315,6 +315,8 @@ class EditorWindow(QMainWindow):
         if not self.is_dirty:
             self.is_dirty = True
             self.update_title()
+        # Обновляем счётчики строк при изменении текста
+        self.update_counts()
 
     def update_title(self):
         title = self.tr("app_title")
@@ -323,6 +325,25 @@ class EditorWindow(QMainWindow):
         if self.is_dirty:
             title += " *"
         self.setWindowTitle(title)
+
+    def update_counts(self):
+        """Обновляет отображение количества строк в статус-баре.
+
+        - total_lines: общее количество строк (включая пустые)
+        - code_lines: количество непустых строк (как базовый показатель "строк кода")
+        """
+        try:
+            text = self.editor.toPlainText()
+        except Exception:
+            text = ""
+
+        total_lines = text.count("\n") + 1 if text else 0
+        code_lines = sum(1 for l in text.splitlines() if l.strip())
+
+        # Формируем сообщение с переводимыми метками
+        left = f"{self.tr('status_lines')} {total_lines}"
+        right = f"{self.tr('status_code_lines')} {code_lines}"
+        self.statusBar().showMessage(f"{left} | {right}")
 
     def maybe_save(self) -> bool:
         if not self.is_dirty:

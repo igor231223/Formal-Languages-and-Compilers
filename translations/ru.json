@@ -56,5 +56,7 @@
   "analysis_words": "🔤 Количество слов:",
   "analysis_chars": "📏 Количество символов:",
   "analysis_chars_no_spaces": "📌 Символов без пробелов:",
-  "analysis_complete": "✅ Анализ успешно завершён!"
+  "analysis_complete": "✅ Анализ успешно завершён!",
+  "status_lines": "Строк:",
+  "status_code_lines": "Строк кода:"
 }
