@@ -3,12 +3,15 @@ import sys
 import json
 
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QFont, QKeySequence, QAction, QIcon
+from PyQt6.QtGui import QFont, QKeySequence, QAction, QIcon, QColor
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QTextEdit,
-    QFileDialog, QMessageBox, QToolBar, QApplication
+    QFileDialog, QMessageBox, QToolBar, QApplication, QTableWidget,
+    QTableWidgetItem, QAbstractItemView, QLabel
 )
 
+# Импортируем сканер из нового модуля
+from scanner import Scanner, Token
 
 class EditorWindow(QMainWindow):
     def __init__(self):
@@ -20,7 +23,7 @@ class EditorWindow(QMainWindow):
         self.trans = {}
 
         self.setMinimumHeight(500)
-        self.setMinimumWidth(500)
+        self.setMinimumWidth(700)
         self.setWindowIcon(QIcon(resource_path("icons/logo.svg")))
 
         self.setGeometry(200, 100, 1100, 750)
@@ -31,6 +34,13 @@ class EditorWindow(QMainWindow):
         self.load_translation(self.current_lang)
 
         self.editor.textChanged.connect(self.on_text_changed)
+        self.output_table.cellClicked.connect(self.go_to_error)
+        
+        self.editor.cursorPositionChanged.connect(self.update_cursor_status)
+
+        self.update_cursor_status()
+
+
 
     def load_translation(self, lang_code: str):
         path = resource_path(os.path.join("translations", f"{lang_code}.json"))
@@ -93,6 +103,13 @@ class EditorWindow(QMainWindow):
             self.removeToolBar(toolbar)
         self.create_toolbar()
 
+        self.output_table.setHorizontalHeaderLabels([
+            self.tr("table_code"), self.tr("table_type"),
+            self.tr("table_lexeme"), self.tr("table_location")
+        ])
+
+        self.update_cursor_status()
+
     def init_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
@@ -107,10 +124,13 @@ class EditorWindow(QMainWindow):
         self.editor.setTabStopDistance(4 * self.editor.fontMetrics().horizontalAdvance(" "))
         self.splitter.addWidget(self.editor)
 
-        self.output = QTextEdit()
-        self.output.setReadOnly(True)
-        self.output.setFont(QFont("Consolas", 11))
-        self.splitter.addWidget(self.output)
+        self.status_label = QLabel()
+        self.statusBar().addPermanentWidget(self.status_label)
+
+        self.output_table = QTableWidget()
+        self.output_table.setColumnCount(4)
+        
+        self.splitter.addWidget(self.output_table)
 
         self.splitter.setSizes([550, 200])
 
@@ -315,8 +335,6 @@ class EditorWindow(QMainWindow):
         if not self.is_dirty:
             self.is_dirty = True
             self.update_title()
-        # Обновляем счётчики строк при изменении текста
-        self.update_counts()
 
     def update_title(self):
         title = self.tr("app_title")
@@ -326,24 +344,15 @@ class EditorWindow(QMainWindow):
             title += " *"
         self.setWindowTitle(title)
 
-    def update_counts(self):
-        """Обновляет отображение количества строк в статус-баре.
-
-        - total_lines: общее количество строк (включая пустые)
-        - code_lines: количество непустых строк (как базовый показатель "строк кода")
-        """
-        try:
-            text = self.editor.toPlainText()
-        except Exception:
-            text = ""
-
-        total_lines = text.count("\n") + 1 if text else 0
-        code_lines = sum(1 for l in text.splitlines() if l.strip())
-
-        # Формируем сообщение с переводимыми метками
-        left = f"{self.tr('status_lines')} {total_lines}"
-        right = f"{self.tr('status_code_lines')} {code_lines}"
-        self.statusBar().showMessage(f"{left} | {right}")
+    def update_cursor_status(self):
+        cursor = self.editor.textCursor()
+        line = cursor.blockNumber() + 1
+        column = cursor.columnNumber() + 1
+        
+        line_str = self.tr('status_line')
+        col_str = self.tr('status_column')
+        
+        self.status_label.setText(f"{line_str} {line} | {col_str} {column}")
 
     def maybe_save(self) -> bool:
         if not self.is_dirty:
@@ -447,28 +456,71 @@ class EditorWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(self, self.tr("about_title"), self.tr("about_text"))
 
-    def run_analysis(self):
-        self.output.clear()
-        self.output.append(self.tr("analysis_start"))
-        text = self.editor.toPlainText()
-        
-        if not text.strip():
-            self.output.append(self.tr("analysis_empty"))
-            self.output.append(self.tr("analysis_hint"))
+    def go_to_error(self, row, column):
+        type_item = self.output_table.item(row, 1)
+        if not type_item or "Ошибка" not in type_item.text():
             return
         
-        lines = text.count('\n') + 1
-        chars = len(text)
-        words = len(text.split())
+        location_item = self.output_table.item(row, 3)
+        parts = location_item.text().split(',')
+        line_num_str = parts[0].split()[1]
+        pos_str = parts[1].split('-')[0].strip()
+
+        try:
+            line_num = int(line_num_str)
+            pos_in_line = int(pos_str)
+        except ValueError:
+            return
+
+        cursor = self.editor.textCursor()
+        cursor.movePosition(cursor.MoveOperation.Start)
+        cursor.movePosition(cursor.MoveOperation.Down, n=line_num - 1)
+        cursor.movePosition(cursor.MoveOperation.Right, n=pos_in_line - 1)
+        self.editor.setTextCursor(cursor)
+        self.editor.setFocus()
+
+
+    def run_analysis(self):
+
+        self.output_table.setHorizontalHeaderLabels(
+            ["Условный код", "Тип лексемы", "Лексема", "Местоположение"]
+        )
+        self.output_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.output_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.output_table.verticalHeader().setVisible(False)
+        self.output_table.horizontalHeader().setStretchLastSection(True)
+        self.output_table.setFont(QFont("Consolas", 11))
+
+        self.output_table.setRowCount(0)
+        text = self.editor.toPlainText()
+
+        if not text.strip():
+            self.output_table.setRowCount(1)
+            item = QTableWidgetItem(self.tr("analysis_empty"))
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.output_table.setItem(0, 0, item)
+            self.output_table.setSpan(0, 0, 1, 4)
+            return
+
+        scanner = Scanner(text)
+        tokens = scanner.scan_tokens()
         
-        self.output.append(self.tr("analysis_results"))
-        self.output.append(self.tr("analysis_separator"))
-        self.output.append(f"{self.tr('analysis_lines')} {lines}")
-        self.output.append(f"{self.tr('analysis_words')} {words}")
-        self.output.append(f"{self.tr('analysis_chars')} {chars}")
-        self.output.append(f"{self.tr('analysis_chars_no_spaces')} {len(text.replace(' ', ''))}")
-        self.output.append(self.tr("analysis_separator"))
-        self.output.append(self.tr("analysis_complete"))
+        self.output_table.setRowCount(len(tokens))
+            
+        for i, token in enumerate(tokens):
+            location = f"{self.tr('status_line')} {token.line}, {token.start_pos}-{token.end_pos}"
+            self.output_table.setItem(i, 0, QTableWidgetItem(str(token.code)))
+            self.output_table.setItem(i, 1, QTableWidgetItem(self.tr(token.type_name)))
+            self.output_table.setItem(i, 2, QTableWidgetItem(token.lexeme))
+            self.output_table.setItem(i, 3, QTableWidgetItem(location))
+
+            if str(token.code) == "100":
+                for j in range(4):
+                    self.output_table.item(i, j).setBackground(QColor(255, 0, 0))
+
+        self.output_table.resizeColumnsToContents()
+        self.output_table.horizontalHeader().setStretchLastSection(True)
+
 
 
 def resource_path(relative_path):
