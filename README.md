@@ -123,3 +123,39 @@ pyinstaller --onefile --windowed --add-data "icons;icons" --add-data "translatio
 ```bash
 dist\TextEditor.exe
 ```
+
+
+### 6. Вариант задания:
+Номер вариант - 98. Цикл repeat-while на языке Swift. 
+Перечень допустимых лексем в рамках варианта задания:
+| repeat | Ключевое слово |
+| { | Начало блока |
+| number | Идентификатор |
+| +/-/*=| Составной оператор присваивания |
+| 2 | Целое число |
+| } | Конец блока |
+| while | Ключевое слово |
+| <= | Оператор сравнения  |
+| 10 | Целое число |
+| ; | Конец оператора |
+
+Примеры корректного ввода
+```bash
+repeat {
+    number += 1
+} while number < 5;
+```
+```bash
+repeat {
+    counter -= 1
+} while counter > 0;
+```
+```bash
+repeat {
+    number *= 3
+} while number < 50;
+```
+
+### 7. Диаграмма состояний
+
+
