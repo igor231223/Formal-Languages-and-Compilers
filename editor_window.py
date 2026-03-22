@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from scanner import Scanner
+from parser import analyze_syntax
 
 class EditorWindow(QMainWindow):
     def __init__(self):
@@ -103,8 +104,9 @@ class EditorWindow(QMainWindow):
         self.create_toolbar()
 
         self.output_table.setHorizontalHeaderLabels([
-            self.tr("table_code"), self.tr("table_type"),
-            self.tr("table_lexeme"), self.tr("table_location")
+            self.tr("table_err_fragment"),
+            self.tr("table_err_location"),
+            self.tr("table_err_desc"),
         ])
 
         self.update_cursor_status()
@@ -127,16 +129,24 @@ class EditorWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.status_label)
 
         self.output_table = QTableWidget()
-        self.output_table.setColumnCount(4)
+        self.output_table.setColumnCount(3)
         self.output_table.setHorizontalHeaderLabels(
-            ["Условный код", "Тип лексемы", "Лексема", "Местоположение"]
+            ["Фрагмент", "Местоположение", "Описание"]
         )
         self.output_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.output_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.output_table.verticalHeader().setVisible(False)
         self.output_table.horizontalHeader().setStretchLastSection(True)
         self.output_table.setFont(QFont("Consolas", 11))
-        self.splitter.addWidget(self.output_table)
+
+        self.output_panel = QWidget()
+        output_layout = QVBoxLayout(self.output_panel)
+        output_layout.setContentsMargins(4, 4, 4, 4)
+        self.analysis_result_label = QLabel()
+        self.analysis_result_label.setWordWrap(True)
+        output_layout.addWidget(self.analysis_result_label)
+        output_layout.addWidget(self.output_table)
+        self.splitter.addWidget(self.output_panel)
 
         self.splitter.setSizes([550, 200])
 
@@ -463,56 +473,81 @@ class EditorWindow(QMainWindow):
         QMessageBox.about(self, self.tr("about_title"), self.tr("about_text"))
 
     def go_to_error(self, row, column):
-        type_item = self.output_table.item(row, 1)
-        if not type_item or "Ошибка" not in type_item.text():
+        item0 = self.output_table.item(row, 0)
+        if not item0:
             return
-        
-        location_item = self.output_table.item(row, 3)
-        parts = location_item.text().split(',')
-        line_num_str = parts[0].split()[1]
-        pos_str = parts[1].split('-')[0].strip()
-
+        data = item0.data(Qt.ItemDataRole.UserRole)
+        if not data:
+            return
+        line_num, pos_start, pos_end = data
         try:
-            line_num = int(line_num_str)
-            pos_in_line = int(pos_str)
-        except ValueError:
+            line_num = int(line_num)
+            pos_start = int(pos_start)
+            pos_end = int(pos_end)
+        except (TypeError, ValueError):
             return
 
         cursor = self.editor.textCursor()
         cursor.movePosition(cursor.MoveOperation.Start)
         cursor.movePosition(cursor.MoveOperation.Down, n=line_num - 1)
-        cursor.movePosition(cursor.MoveOperation.Right, n=pos_in_line - 1)
+        cursor.movePosition(cursor.MoveOperation.Right, n=pos_start - 1)
+        cursor.movePosition(
+            cursor.MoveOperation.Right,
+            cursor.MoveMode.KeepAnchor,
+            pos_end - pos_start + 1,
+        )
         self.editor.setTextCursor(cursor)
         self.editor.setFocus()
 
 
     def run_analysis(self):
+        self.output_table.clearSpans()
         self.output_table.setRowCount(0)
+        self.analysis_result_label.setText("")
         text = self.editor.toPlainText()
 
         if not text.strip():
+            self.output_table.setColumnCount(3)
             self.output_table.setRowCount(1)
             item = QTableWidgetItem(self.tr("analysis_empty"))
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.output_table.setItem(0, 0, item)
-            self.output_table.setSpan(0, 0, 1, 4)
+            self.output_table.setSpan(0, 0, 1, 3)
+            self.analysis_result_label.setText(self.tr("analysis_error_count").format(0))
             return
 
         scanner = Scanner(text)
         tokens = scanner.scan_tokens()
-        
-        self.output_table.setRowCount(len(tokens))
-            
-        for i, token in enumerate(tokens):
-            location = f"{self.tr('status_line')} {token.line}, {token.start_pos}-{token.end_pos}"
-            self.output_table.setItem(i, 0, QTableWidgetItem(str(token.code)))
-            self.output_table.setItem(i, 1, QTableWidgetItem(token.type_name))
-            self.output_table.setItem(i, 2, QTableWidgetItem(token.lexeme))
-            self.output_table.setItem(i, 3, QTableWidgetItem(location))
+        result = analyze_syntax(tokens)
 
-            if str(token.code) == "100":
-                for j in range(4):
-                    self.output_table.item(i, j).setBackground(QColor(255, 0, 0))
+        self.output_table.setColumnCount(3)
+
+        if result.ok:
+            self.output_table.setRowCount(1)
+            msg = QTableWidgetItem(self.tr("analysis_ok"))
+            msg.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.output_table.setItem(0, 0, msg)
+            self.output_table.setSpan(0, 0, 1, 3)
+            self.analysis_result_label.setText(self.tr("analysis_error_count").format(0))
+        else:
+            errors_num = len(result.errors)
+            self.analysis_result_label.setText(self.tr("analysis_error_count").format(errors_num))
+            self.output_table.setRowCount(errors_num)
+            for i, err in enumerate(result.errors):
+                fragment = QTableWidgetItem(err.fragment)
+                location = QTableWidgetItem(
+                    f"{self.tr('status_line')} {err.line}, "
+                    f"{self.tr('err_position')} {err.start_pos}-{err.end_pos}"
+                )
+                description = QTableWidgetItem(err.message)
+                pos_data = (err.line, err.start_pos, err.end_pos)
+                fragment.setData(Qt.ItemDataRole.UserRole, pos_data)
+                fragment.setBackground(QColor(255, 0, 0))
+                location.setBackground(QColor(255, 0, 0))
+                description.setBackground(QColor(255, 0, 0))
+                self.output_table.setItem(i, 0, fragment)
+                self.output_table.setItem(i, 1, location)
+                self.output_table.setItem(i, 2, description)
 
         self.output_table.resizeColumnsToContents()
         self.output_table.horizontalHeader().setStretchLastSection(True)

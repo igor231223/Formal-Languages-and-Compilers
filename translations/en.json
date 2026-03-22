@@ -37,8 +37,8 @@
   "help_section_hotkeys": "Hotkeys:",
   "help_hotkeys": "• Ctrl+N - New file\n• Ctrl+O - Open file\n• Ctrl+S - Save\n• Ctrl+Shift+S - Save as\n• Ctrl+Z - Undo\n• Ctrl+Y - Redo\n• Ctrl+X - Cut\n• Ctrl+C - Copy\n• Ctrl+V - Paste\n• Ctrl+A - Select all\n• F5 - Run analysis\n• F1 - Help",
   "help_section_analysis": "Analysis Function:",
-  "help_analysis": "The program performs basic analysis of entered text:\n• Empty text check\n• Character count\n• Words count\n• Lines count\n• Statistics output to bottom panel",
-  "help_section_i18n": "🌐 Internationalization:",
+  "help_analysis": "Lexical analysis (scanner) runs first, then syntax analysis for the Swift construct: repeat { … } while <condition>;.\n• On success — a message that there are no errors.\n• On errors — a table with fragment, location, and description; click a row to jump to the fragment.",
+  "help_section_i18n": "Internationalization:",
   "help_i18n": "• Russian and English language support\n• Automatic interface update when switching language",
   "help_section_interface": "Interface:",
   "help_interface": "• Dual-panel interface (editor + output)\n• Adjustable panel sizes\n• Toolbar with icons\n• Tooltips for all buttons\n• Modern style with hover effects",
@@ -48,9 +48,16 @@
   "help_technical": "• Written in Python using PyQt6\n• Modular architecture\n• Easily extensible functionality\n• Cross-platform compatibility",
   
   "analysis_empty": "Empty text - nothing to analyze.",
+  "analysis_ok": "No syntax errors. The repeat { } while … ; construct is valid.",
+  "analysis_error_count": "Total errors: {0}",
+  "err_position": "pos.",
 
   "status_line": "Line:",
   "status_column": "Column:",
+
+  "table_err_fragment": "Invalid fragment",
+  "table_err_location": "Location",
+  "table_err_desc": "Description",
 
   "table_code": "Code",
   "table_type": "Token Type",

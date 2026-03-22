@@ -138,9 +138,29 @@ class Scanner:
             end_pos = start_pos + len(lexeme) - 1
             return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
-        # ошибка
+        lexeme = char
+        while not self.is_at_end() and not self.could_start_token(self.peek()):
+            lexeme += self.advance()
         code, type_name = TOKEN_TYPES["ERROR"]
-        return Token(code, type_name, char, self.line, start_pos, start_pos)
+        end_pos = start_pos + len(lexeme) - 1
+        return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+
+    def could_start_token(self, c):
+        if c == "\0":
+            return False
+        if c in " \n":
+            return True
+        if c in "{};":
+            return True
+        if c in "<>=":
+            return True
+        if c in "+-*/":
+            return True
+        if c.isdigit():
+            return True
+        if c.isalpha():
+            return True
+        return False
 
     def advance(self):
         char = self.text[self.pos]
