@@ -12,6 +12,9 @@ TOKEN_TYPES = {
     "NEWLINE": (11, "Разделитель (перенос строки)"),
     "ARITHMETIC_OPERATOR": (12, "Арифметический оператор"),
     "ASSIGNMENT_OPERATOR": (13, "Оператор присваивания"),
+    "AND": (14, "Логический оператор"),
+    "OR": (15, "Логический оператор"),
+    "NOT": (16, "Логический оператор"),
     "ERROR": (100, "Ошибка (недопустимый символ)")
 }
 
@@ -94,6 +97,15 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["ASSIGNMENT_OPERATOR"]
                 return Token(code, type_name, char, self.line, start_pos, start_pos)
 
+        # оператор неравенства
+        if char == '!':
+            if self.match('='):
+                code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
+                return Token(code, type_name, "!=", self.line, start_pos, start_pos + 1)
+            else:
+                code, type_name = TOKEN_TYPES["ERROR"]
+                return Token(code, type_name, char, self.line, start_pos, start_pos)
+
         # операторы и составные операторы присваивания
         if char in ['+', '-', '*', '/']:
             if self.match('='):
@@ -132,6 +144,12 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["REPEAT"]
             elif lexeme == "while":
                 code, type_name = TOKEN_TYPES["WHILE"]
+            elif lexeme == "and":
+                code, type_name = TOKEN_TYPES["AND"]
+            elif lexeme == "or":
+                code, type_name = TOKEN_TYPES["OR"]
+            elif lexeme == "not":
+                code, type_name = TOKEN_TYPES["NOT"]
             else:
                 code, type_name = TOKEN_TYPES["IDENTIFIER"]
 

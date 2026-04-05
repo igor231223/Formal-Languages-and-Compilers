@@ -48,7 +48,7 @@
   "help_technical": "• Written in Python using PyQt6\n• Modular architecture\n• Easily extensible functionality\n• Cross-platform compatibility",
   
   "analysis_empty": "Empty text - nothing to analyze.",
-  "analysis_ok": "No syntax errors. The repeat { } while … ; construct is valid.",
+  "analysis_ok": "No syntax errors, construct is valid.",
   "analysis_error_count": "Total errors: {0}",
   "err_position": "pos.",
 
