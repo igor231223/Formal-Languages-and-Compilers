@@ -359,6 +359,7 @@ III Блок.
 - 12A456  
 
 **Тестовые примеры:**
+
 <img width="426" height="187" alt="image" src="https://github.com/user-attachments/assets/45b59a9d-fc16-439e-b79e-6970b3c180bd" />
 
 ---
@@ -392,6 +393,7 @@ III Блок.
 - 62123456789012345678  
 
 **Тестовые примеры:**
+
 <img width="410" height="178" alt="image" src="https://github.com/user-attachments/assets/f7114f9f-2ba7-4b87-b2d5-3e2639437fd8" />
 
 ---
@@ -432,6 +434,7 @@ III Блок.
 - hsl120,50%,40%  
 
 **Тестовые примеры:**
+
 <img width="412" height="184" alt="image" src="https://github.com/user-attachments/assets/92213c84-578a-4947-8caf-9c8f8655690b" />
 
 ---
