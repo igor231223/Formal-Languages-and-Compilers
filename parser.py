@@ -128,12 +128,24 @@ class Parser:
         if not self.expect(CODE_RBRACE, "Ожидался символ '}'", CODE_RBRACE, CODE_WHILE):
             return
 
-        if not self.expect(CODE_WHILE, "Ожидалось ключевое слово while", CODE_WHILE, CODE_SEMICOLON):
+        if not self.take(CODE_WHILE):
+            self.err_here("Ожидалось ключевое слово while")
+            self.skip_nl()
+            if self.take(CODE_SEMICOLON):
+                return
+            if not self.eof():
+                self.condition()
+                self.skip_nl()
+                if not self.take(CODE_SEMICOLON):
+                    self.err_here("Ожидался символ ';' в конце конструкции")
+            else:
+                self.err_here("Ожидался символ ';' в конце конструкции")
             return
 
         self.condition()
-
-        self.expect(CODE_SEMICOLON, "Ожидался символ ';' в конце конструкции", CODE_SEMICOLON)
+        self.skip_nl()
+        if not self.take(CODE_SEMICOLON):
+            self.err_here("Ожидался символ ';' в конце конструкции")
 
     def stmt_list(self):
         while not self.eof():
@@ -223,7 +235,7 @@ class Parser:
 
         op = self.peek()
         if op is None:
-            self.err_here("Ожидался оператор сравнения")
+            self.err_here("Ожидался оператор сравнения (<, >, ==, ...)")
             return
         if op.code != CODE_COMPARE:
             self.err_here("Ожидался оператор сравнения (<, >, ==, ...)")
