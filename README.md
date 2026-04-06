@@ -164,7 +164,7 @@ repeat {
 ```
 
 ### 2. Диаграмма состояний
-<img width="495" height="1053" alt="Снимок экрана 2026-03-16 030823" src="https://github.com/user-attachments/assets/d7474532-0a2f-4d55-8066-74dbe2fc8116" />
+![Седня](https://github.com/user-attachments/assets/f413f561-0fd9-44b7-a471-8af39779ca03)
 
 ### 3. Тестовые примеры
 Пример с корректной строкой:
