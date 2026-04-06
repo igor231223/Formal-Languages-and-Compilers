@@ -12,6 +12,11 @@ CODE_SEMICOLON = 10
 CODE_NEWLINE = 11
 CODE_ARITH = 12
 CODE_ASSIGN = 13
+CODE_AND = 14
+CODE_OR = 15
+CODE_NOT = 16
+CODE_LPAREN = 17
+CODE_RPAREN = 18
 
 
 class ParseError:
@@ -37,8 +42,10 @@ class Parser:
         self.errors = []
 
     def parse(self):
-        self.repeat_while()
-        if not self.eof():
+        self.skip_nl()
+        ok = self.repeat_while()
+        self.skip_nl()
+        if ok and not self.eof():
             t = self.peek()
             self.add_err(
                 "Лишние символы после завершения конструкции repeat-while",
@@ -48,7 +55,7 @@ class Parser:
                 t.end_pos,
             )
             self.pos = len(self.tokens)
-        return ParseResult(len(self.errors) == 0, list(self.errors))
+        return ParseResult(ok and self.eof(), list(self.errors))
 
     def peek(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
@@ -77,7 +84,11 @@ class Parser:
     def err_here(self, msg):
         t = self.peek()
         if t is None:
-            self.add_err(msg, "EOF", 1, 1, 1)
+            if self.pos > 0:
+                prev = self.tokens[self.pos - 1]
+                self.add_err(msg, "", prev.line, prev.end_pos, prev.end_pos)
+            else:
+                self.add_err(msg, "EOF", 1, 1, 1)
         else:
             self.add_err(msg, t.lexeme, t.line, t.start_pos, t.end_pos)
 
@@ -109,51 +120,70 @@ class Parser:
         t = self.peek()
         if t is None:
             self.err_here("Ожидалось ключевое слово repeat")
-            return
+            return False
 
+        saw_repeat = False
         if t.code == CODE_REPEAT:
             self.advance()
+            saw_repeat = True
         else:
             self.err_here("Ожидалось ключевое слово repeat")
             if t.code != CODE_LBRACE:
-                self.sync_to(CODE_LBRACE, CODE_RBRACE)
-                if self.eof():
-                    return
+                self.advance()
 
-        if not self.expect(CODE_LBRACE, "Ожидался символ '{'", CODE_LBRACE, CODE_RBRACE, CODE_WHILE):
-            return
+        self.skip_nl()
+        if self.eof() and not saw_repeat:
+            return False
+
+        if not self.take(CODE_LBRACE):
+            self.err_here("Ожидался символ '{'")
 
         self.stmt_list()
 
-        if not self.expect(CODE_RBRACE, "Ожидался символ '}'", CODE_RBRACE, CODE_WHILE):
-            return
-
-        if not self.take(CODE_WHILE):
-            self.err_here("Ожидалось ключевое слово while")
-            self.skip_nl()
-            if self.take(CODE_SEMICOLON):
-                return
-            if not self.eof():
-                self.condition()
-                self.skip_nl()
-                if not self.take(CODE_SEMICOLON):
-                    self.err_here("Ожидался символ ';' в конце конструкции")
-            else:
-                self.err_here("Ожидался символ ';' в конце конструкции")
-            return
-
-        self.condition()
         self.skip_nl()
-        if not self.take(CODE_SEMICOLON):
-            self.err_here("Ожидался символ ';' в конце конструкции")
+        self.expect(CODE_RBRACE, "Ожидался символ '}'", CODE_WHILE)
+
+        self.skip_nl()
+        if not self.expect(CODE_WHILE, "Ожидалось ключевое слово while"):
+            self.skip_nl()
+            if not self.eof():
+                self.logical_expr()
+                self.skip_nl()
+                self.expect(CODE_SEMICOLON, "Ожидался символ ';' в конце конструкции")
+            return True
+
+        self.skip_nl()
+        self.logical_expr()
+
+        self.skip_nl()
+        self.expect(CODE_SEMICOLON, "Ожидался символ ';' в конце конструкции")
+
+        return True
 
     def stmt_list(self):
-        while not self.eof():
+        while not self.eof() and self.peek().code not in (CODE_RBRACE, CODE_WHILE):
             self.skip_nl()
             t = self.peek()
-            if t is None or t.code == CODE_RBRACE:
+            if t is None or t.code == CODE_RBRACE or t.code == CODE_WHILE:
+                return
+            if self.is_maybe_condition_start():
                 return
             self.stmt()
+
+    def is_maybe_condition_start(self):
+        t = self.peek()
+        if t is None:
+            return False
+        if t.code == CODE_NOT:
+            return True
+        if t.code == CODE_LPAREN: 
+            return True
+        if t.code != CODE_IDENTIFIER:
+            return False
+        if self.pos + 1 >= len(self.tokens):
+            return False
+        nxt = self.tokens[self.pos + 1]
+        return nxt.code == CODE_COMPARE
 
     def stmt(self):
         t = self.peek()
@@ -161,14 +191,34 @@ class Parser:
             self.err_here("Ожидался оператор в теле цикла")
             return
         if t.code != CODE_IDENTIFIER:
-            self.err_here("Ожидался идентификатор (начало оператора присваивания)")
-            self.syncstmt()
-            return
+            op_t = self.peek()
+            if op_t and op_t.code == CODE_COMPOUND_ASSIGN:
+                self.add_err(
+                    "Ожидался идентификатор для составного оператора «%s»" % op_t.lexeme,
+                    op_t.lexeme,
+                    op_t.line,
+                    op_t.start_pos,
+                    op_t.end_pos,
+                )
+            elif op_t and op_t.code == CODE_ASSIGN:
+                self.add_err(
+                    "Ожидался идентификатор для оператора '='",
+                    op_t.lexeme,
+                    op_t.line,
+                    op_t.start_pos,
+                    op_t.end_pos,
+                )
+            else:
+                self.err_here("Ожидался идентификатор (начало оператора присваивания)")
+        else:
+            self.advance()
 
-        self.advance()
         op = self.peek()
         if op is None:
-            self.add_err("Ожидался оператор присваивания", "EOF", t.line, t.end_pos, t.end_pos)
+            if t.code == CODE_IDENTIFIER:
+                self.add_err("Ожидался оператор присваивания", "EOF", t.line, t.end_pos, t.end_pos)
+            else:
+                self.add_err("Ожидался оператор присваивания", "", t.line, t.start_pos, t.start_pos)
             return
         if op.code not in (CODE_ASSIGN, CODE_COMPOUND_ASSIGN):
             self.add_err(
@@ -178,11 +228,12 @@ class Parser:
                 op.start_pos,
                 op.end_pos,
             )
+            self.add_err("Ожидалось выражение (идентификатор или число)", "", t.line if t.code == CODE_IDENTIFIER else op.line, t.end_pos if t.code == CODE_IDENTIFIER else op.start_pos, t.end_pos if t.code == CODE_IDENTIFIER else op.start_pos)
             self.syncstmt()
             return
 
         self.advance()
-        self.expr()
+        self.expr_after_assign()
         self.skip_nl()
 
         nxt = self.peek()
@@ -194,14 +245,6 @@ class Parser:
             return
         if nxt.code in (CODE_RBRACE, CODE_IDENTIFIER):
             return
-        self.add_err(
-            "Ожидался символ ';', перенос строки, начало следующего оператора или '}'",
-            nxt.lexeme,
-            nxt.line,
-            nxt.start_pos,
-            nxt.end_pos,
-        )
-        self.syncstmt()
 
     def expr(self):
         self.term()
@@ -209,25 +252,130 @@ class Parser:
             self.advance()
             self.term()
 
+    def _reject_illegal_token_after_digit_rhs(self, last_tok):
+        """После целого литерала справа от += недопустимы: смежные буквы (23f) или идентификатор на той же строке без оператора (23 ef3f)."""
+        if last_tok is None or last_tok.code != CODE_DIGIT:
+            return
+        p = self.peek()
+        if not p or p.code != CODE_IDENTIFIER or p.line != last_tok.line:
+            return
+        adjacent = p.start_pos == last_tok.end_pos + 1
+        if not adjacent and p.start_pos <= last_tok.end_pos:
+            return
+        if adjacent:
+            glued = last_tok.lexeme + p.lexeme
+            msg = (
+                "Недопустимая запись числа: после цифр не может следовать буква без разделителя («%s»)"
+                % glued
+            )
+        else:
+            msg = (
+                "Недопустимое продолжение выражения: после числа «%s» не может следовать идентификатор «%s» без арифметического оператора"
+                % (last_tok.lexeme, p.lexeme)
+            )
+        self.add_err(msg, p.lexeme, p.line, p.start_pos, p.end_pos)
+        self.advance()
+
+    def expr_after_assign(self):
+        self.skip_nl()
+        t = self.peek()
+        if t is None:
+            self.err_here("Ожидалось значение выражения (идентификатор или число)")
+            return
+        last = None
+        if t.code in (CODE_IDENTIFIER, CODE_DIGIT):
+            self.advance()
+            last = t
+        else:
+            self.add_err(
+                "Ожидалось значение выражения (идентификатор или число)",
+                t.lexeme,
+                t.line,
+                t.start_pos,
+                t.end_pos,
+            )
+            self.sync_to(CODE_SEMICOLON, CODE_ARITH, CODE_RBRACE, CODE_WHILE)
+            return
+        while self.peek() and self.peek().code == CODE_ARITH:
+            self.advance()
+            rt = self.term()
+            if rt is not None:
+                last = rt
+        self._reject_illegal_token_after_digit_rhs(last)
+
     def term(self):
+        self.skip_nl()
         t = self.peek()
         if t is None:
             self.err_here("Ожидалось выражение (идентификатор или число)")
-            return
+            return None
         if t.code in (CODE_IDENTIFIER, CODE_DIGIT):
             self.advance()
-            return
-        self.err_here("Ожидались идентификатор или целое число")
-        self.sync_to(CODE_SEMICOLON, CODE_ARITH, CODE_RBRACE)
+            return t
+        self.err_here("Ожидались идентификатор или целое число в выражении")
+        self.sync_to(CODE_SEMICOLON, CODE_ARITH, CODE_RBRACE, CODE_WHILE)
+        return None
 
-    def condition(self):
+    def logical_expr(self):
+        self.logical_or_chain()
+
+        t = self.peek()
+        if t and t.code == CODE_COMPARE:
+            self.err_here("Ожидается логический оператор (and, or) или конец условия перед оператором сравнения")
+            self.sync_to(CODE_SEMICOLON)
+        elif t and t.code == CODE_IDENTIFIER:
+            self.err_here("Ожидается логический оператор (and, or) перед %s" % t.lexeme)
+            self.sync_to(CODE_SEMICOLON)
+        elif t and t.code == CODE_RPAREN:
+            self.err_here("Лишняя закрывающая скобка в условии")
+            self.sync_to(CODE_SEMICOLON)
+        return
+
+    def logical_or_chain(self):
+        self.logical_and_chain()
+        while self.peek() and self.peek().code == CODE_OR:
+            self.advance()
+            self.logical_and_chain()
+
+    def logical_and_chain(self):
+        self.logical_term()
+        while self.peek() and self.peek().code == CODE_AND:
+            self.advance()
+            self.logical_term()
+
+    def logical_term(self):
+        if self.take(CODE_NOT):
+            self.skip_nl()
+            self.logical_factor()
+        else:
+            self.logical_factor()
+
+
+    def logical_factor(self):
+        self.skip_nl()
+        if self.take(CODE_LPAREN):
+            self.skip_nl()
+            self.logical_or_chain()
+            self.skip_nl()
+            self.expect(
+                CODE_RPAREN,
+                "Ожидался символ ')'",
+                CODE_SEMICOLON,
+                CODE_AND,
+                CODE_OR,
+                CODE_RPAREN,
+            )
+            return
+        self.comparison()
+
+    def comparison(self):
         t = self.peek()
         if t is None:
             self.err_here("Ожидалось условие (идентификатор)")
             return
         if t.code != CODE_IDENTIFIER:
             self.err_here("В условии ожидался идентификатор")
-            self.sync_to(CODE_COMPARE, CODE_SEMICOLON)
+            self.sync_to(CODE_COMPARE, CODE_SEMICOLON, CODE_RPAREN)
             if self.eof():
                 return
         else:
@@ -235,19 +383,20 @@ class Parser:
 
         op = self.peek()
         if op is None:
-            self.err_here("Ожидался оператор сравнения (<, >, ==, ...)")
+            self.err_here("Ожидался оператор сравнения")
             return
         if op.code != CODE_COMPARE:
             self.err_here("Ожидался оператор сравнения (<, >, ==, ...)")
-            self.sync_to(CODE_DIGIT, CODE_IDENTIFIER, CODE_SEMICOLON)
+            self.sync_to(CODE_AND, CODE_OR, CODE_SEMICOLON, CODE_RPAREN)
+            if self.peek() and self.peek().code in (CODE_AND, CODE_OR, CODE_SEMICOLON, CODE_RPAREN):
+                return
         else:
             self.advance()
 
         val = self.peek()
         if val is None:
-            self.err_here("Ожидалось значение после оператора сравнения")
-            return
-        if val.code not in (CODE_IDENTIFIER, CODE_DIGIT):
+            self.err_here("Ожидались идентификатор или целое число в условии")
+        elif val.code not in (CODE_IDENTIFIER, CODE_DIGIT):
             self.err_here("Ожидались идентификатор или целое число в условии")
             self.sync_to(CODE_SEMICOLON)
         else:

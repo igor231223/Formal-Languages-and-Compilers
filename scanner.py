@@ -12,6 +12,11 @@ TOKEN_TYPES = {
     "NEWLINE": (11, "Разделитель (перенос строки)"),
     "ARITHMETIC_OPERATOR": (12, "Арифметический оператор"),
     "ASSIGNMENT_OPERATOR": (13, "Оператор присваивания"),
+    "AND": (14, "Логический оператор"),
+    "OR": (15, "Логический оператор"),
+    "NOT": (16, "Логический оператор"),
+    "LPAREN": (17, "Открывающая скобка"),
+    "RPAREN": (18, "Закрывающая скобка"),
     "ERROR": (100, "Ошибка (недопустимый символ)")
 }
 
@@ -94,6 +99,15 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["ASSIGNMENT_OPERATOR"]
                 return Token(code, type_name, char, self.line, start_pos, start_pos)
 
+        # оператор неравенства
+        if char == '!':
+            if self.match('='):
+                code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
+                return Token(code, type_name, "!=", self.line, start_pos, start_pos + 1)
+            else:
+                code, type_name = TOKEN_TYPES["ERROR"]
+                return Token(code, type_name, char, self.line, start_pos, start_pos)
+
         # операторы и составные операторы присваивания
         if char in ['+', '-', '*', '/']:
             if self.match('='):
@@ -132,11 +146,25 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["REPEAT"]
             elif lexeme == "while":
                 code, type_name = TOKEN_TYPES["WHILE"]
+            elif lexeme == "and":
+                code, type_name = TOKEN_TYPES["AND"]
+            elif lexeme == "or":
+                code, type_name = TOKEN_TYPES["OR"]
+            elif lexeme == "not":
+                code, type_name = TOKEN_TYPES["NOT"]
             else:
                 code, type_name = TOKEN_TYPES["IDENTIFIER"]
 
             end_pos = start_pos + len(lexeme) - 1
             return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+
+        if char == '(':
+            code, type_name = TOKEN_TYPES["LPAREN"]
+            return Token(code, type_name, char, self.line, start_pos, start_pos)
+
+        if char == ')':
+            code, type_name = TOKEN_TYPES["RPAREN"]
+            return Token(code, type_name, char, self.line, start_pos, start_pos)
 
         lexeme = char
         while not self.is_at_end() and not self.could_start_token(self.peek()):
@@ -150,7 +178,7 @@ class Scanner:
             return False
         if c in " \n":
             return True
-        if c in "{};":
+        if c in "{}();":
             return True
         if c in "<>=":
             return True

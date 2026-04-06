@@ -3,15 +3,158 @@ import sys
 import json
 
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QFont, QKeySequence, QAction, QIcon, QColor
+from PyQt6.QtGui import (
+    QFont,
+    QKeySequence,
+    QAction,
+    QIcon,
+    QColor,
+    QTextCursor,
+    QTextCharFormat,
+)
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter, QTextEdit,
-    QFileDialog, QMessageBox, QToolBar, QApplication, QTableWidget,
-    QTableWidgetItem, QAbstractItemView, QLabel
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QSplitter,
+    QTextEdit,
+    QFileDialog,
+    QMessageBox,
+    QToolBar,
+    QApplication,
+    QTableWidget,
+    QTableWidgetItem,
+    QAbstractItemView,
+    QLabel,
+    QComboBox,
+    QLineEdit,
+    QPushButton,
+    QToolButton,
 )
 
+import re
+
+from regex_search import find_literal_matches, find_matches
 from scanner import Scanner
 from parser import analyze_syntax
+
+
+class SearchPopup(QWidget):
+    MODE_PLAIN = 0
+    MODE_REGEX = 1
+
+    REGEX_PRESETS = [
+        ("search_regex_preset_custom", None),
+        (
+            "search_regex_preset_cn_postal",
+            r"^\d{6}$",
+        ),
+        (
+            "search_regex_preset_unionpay",
+            r"^(62|81)\d{14,17}$",
+        ),
+        (
+            "search_regex_preset_hsl",
+            r"^hsl\(\s*(360|3[0-5]\d|[12]?\d{1,2})\s*,\s*(100|[1-9]?\d)%\s*,\s*(100|[1-9]?\d)%\s*\)$",
+        ),
+    ]
+
+    def __init__(self, editor_window: "EditorWindow"):
+        super().__init__(
+            editor_window,
+            Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint,
+        )
+        self._win = editor_window
+        self.setMinimumWidth(380)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(10, 10, 10, 10)
+        outer.setSpacing(8)
+
+        row_find = QHBoxLayout()
+        self.find_input = QLineEdit()
+        self.find_btn = QPushButton()
+        self.find_btn.setFixedWidth(88)
+        self.find_btn.clicked.connect(self._on_find)
+        self.find_input.returnPressed.connect(self._on_find)
+        row_find.addWidget(self.find_input, 1)
+        row_find.addWidget(self.find_btn)
+        outer.addLayout(row_find)
+
+        self.mode_combo = QComboBox()
+        self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        outer.addWidget(self.mode_combo)
+
+        self.regex_extra = QWidget()
+        re_lay = QVBoxLayout(self.regex_extra)
+        re_lay.setContentsMargins(0, 0, 0, 0)
+        self.preset_combo = QComboBox()
+        self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
+        re_lay.addWidget(self.preset_combo)
+        outer.addWidget(self.regex_extra)
+        self.regex_extra.hide()
+
+        self._suppress_preset_signal = False
+        self._build_mode_combo()
+        self._build_preset_combo()
+        self.setObjectName("SearchPopup")
+        self.setStyleSheet(
+            "#SearchPopup { background: palette(base); "
+            "border: 1px solid palette(mid); border-radius: 6px; }"
+        )
+
+    def _build_mode_combo(self):
+        self.mode_combo.blockSignals(True)
+        self.mode_combo.clear()
+        self.mode_combo.addItem("", self.MODE_PLAIN)
+        self.mode_combo.addItem("", self.MODE_REGEX)
+        self.mode_combo.setCurrentIndex(self.MODE_PLAIN)
+        self.mode_combo.blockSignals(False)
+
+    def _build_preset_combo(self):
+        self.preset_combo.blockSignals(True)
+        self.preset_combo.clear()
+        for key, _pat in self.REGEX_PRESETS:
+            self.preset_combo.addItem("", _pat)
+        self.preset_combo.setCurrentIndex(0)
+        self.preset_combo.blockSignals(False)
+
+    def retranslate(self):
+        self.find_btn.setText(self._win.tr("search_find_btn"))
+        self.mode_combo.setItemText(0, self._win.tr("search_mode_plain"))
+        self.mode_combo.setItemText(1, self._win.tr("search_mode_regex"))
+        for i, (key, _pat) in enumerate(self.REGEX_PRESETS):
+            self.preset_combo.setItemText(i, self._win.tr(key))
+
+    def _on_mode_changed(self, _index: int):
+        is_regex = self.mode_combo.currentData() == self.MODE_REGEX
+        self.regex_extra.setVisible(is_regex)
+        self.adjustSize()
+        if is_regex:
+            self._apply_preset_to_field()
+
+    def _on_preset_changed(self, _index: int):
+        if self._suppress_preset_signal:
+            return
+        self._apply_preset_to_field()
+
+    def _apply_preset_to_field(self):
+        if self.mode_combo.currentData() != self.MODE_REGEX:
+            return
+        pat = self.preset_combo.currentData()
+        if pat is None:
+            return
+        self._suppress_preset_signal = True
+        self.find_input.setText(pat)
+        self._suppress_preset_signal = False
+
+    def _on_find(self):
+        text = self.find_input.text()
+        if self.mode_combo.currentData() == self.MODE_PLAIN:
+            self._win.run_search_query(literal=True, query=text)
+        else:
+            self._win.run_search_query(literal=False, query=text)
+
 
 class EditorWindow(QMainWindow):
     def __init__(self):
@@ -21,6 +164,8 @@ class EditorWindow(QMainWindow):
         self.is_dirty = False
         self.current_lang = "ru"
         self.trans = {}
+        self.output_mode = "analysis"
+        self._search_popup = None
 
         self.setMinimumHeight(500)
         self.setMinimumWidth(700)
@@ -34,6 +179,7 @@ class EditorWindow(QMainWindow):
         self.load_translation(self.current_lang)
 
         self.editor.textChanged.connect(self.on_text_changed)
+        self.editor.textChanged.connect(self._clear_editor_search_highlights)
         self.output_table.cellClicked.connect(self.go_to_error)
         
         self.editor.cursorPositionChanged.connect(self.update_cursor_status)
@@ -94,6 +240,9 @@ class EditorWindow(QMainWindow):
         self.tb_open.setToolTip(self.tr("file_open"))
         self.tb_new.setToolTip(self.tr("file_new"))
         self.tb_run.setToolTip(self.tr("run"))
+        self.menu_search.setText(self.tr("search_action"))
+        if getattr(self, "search_tool_button", None):
+            self.search_tool_button.setToolTip(self.tr("search_action"))
 
         # Recreate menu + toolbar
         self.menuBar().clear()
@@ -103,11 +252,10 @@ class EditorWindow(QMainWindow):
             self.removeToolBar(toolbar)
         self.create_toolbar()
 
-        self.output_table.setHorizontalHeaderLabels([
-            self.tr("table_err_fragment"),
-            self.tr("table_err_location"),
-            self.tr("table_err_desc"),
-        ])
+        self._refresh_output_table_headers()
+
+        if self._search_popup is not None:
+            self._search_popup.retranslate()
 
         self.update_cursor_status()
 
@@ -149,6 +297,43 @@ class EditorWindow(QMainWindow):
         self.splitter.addWidget(self.output_panel)
 
         self.splitter.setSizes([550, 200])
+
+    def _clear_editor_search_highlights(self):
+        self.editor.setExtraSelections([])
+
+    def _apply_editor_search_highlights(self, matches):
+        if not matches:
+            self._clear_editor_search_highlights()
+            return
+        doc = self.editor.document()
+        fmt = QTextCharFormat()
+        fmt.setBackground(QColor(180, 180, 180))
+        selections = []
+        for m in matches:
+            cur = QTextCursor(doc)
+            cur.setPosition(m.abs_start)
+            cur.setPosition(m.abs_end, QTextCursor.MoveMode.KeepAnchor)
+            extra = QTextEdit.ExtraSelection()
+            extra.cursor = cur
+            extra.format = fmt
+            selections.append(extra)
+        self.editor.setExtraSelections(selections)
+
+    def _position_search_popup(self, popup: "SearchPopup") -> None:
+        popup.adjustSize()
+        pw = popup.width()
+        ph = popup.height()
+        fg = self.frameGeometry()
+        margin = 8
+        x = fg.right() - pw - margin
+        tb = getattr(self, "_main_toolbar", None)
+        if tb is not None:
+            y = tb.mapToGlobal(tb.rect().bottomLeft()).y() + 2
+        else:
+            y = fg.top() + margin
+        x = max(fg.left() + margin, min(x, fg.right() - pw - margin))
+        y = max(fg.top() + margin, min(y, fg.bottom() - ph - margin))
+        popup.move(x, y)
 
     def create_actions(self):
         # Menu actions
@@ -201,6 +386,10 @@ class EditorWindow(QMainWindow):
         self.menu_run = QAction(self)
         self.menu_run.setShortcut(QKeySequence("F5"))
         self.menu_run.triggered.connect(self.run_analysis)
+
+        self.menu_search = QAction(self)
+        self.menu_search.setShortcut(QKeySequence("Ctrl+F"))
+        self.menu_search.triggered.connect(self.open_search_popup)
 
         # Language
         self.lang_ru_act = QAction(self)
@@ -285,6 +474,8 @@ class EditorWindow(QMainWindow):
         edit_menu.addAction(self.menu_paste)
         edit_menu.addSeparator()
         edit_menu.addAction(self.menu_select_all)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self.menu_search)
 
         run_menu = mb.addMenu(self.tr("run"))
         run_menu.addAction(self.menu_run)
@@ -299,6 +490,7 @@ class EditorWindow(QMainWindow):
 
     def create_toolbar(self):
         tb = QToolBar(self.tr("toolbar"))
+        self._main_toolbar = tb
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, tb)
 
         tb.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
@@ -320,6 +512,17 @@ class EditorWindow(QMainWindow):
         tb.addAction(self.tb_copy)
         tb.addAction(self.tb_paste)
         tb.addSeparator()
+
+        self.search_tool_button = QToolButton(tb)
+        self.search_tool_button.setIcon(QIcon(resource_path("icons/search.svg")))
+        self.search_tool_button.setIconSize(QSize(32, 32))
+        self.search_tool_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
+        self.search_tool_button.setToolTip(self.tr("search_action"))
+        self.search_tool_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.search_tool_button.clicked.connect(self.open_search_popup)
+        tb.addWidget(self.search_tool_button)
 
         tb.addAction(self.tb_help)
         tb.addAction(self.tb_about)
@@ -472,6 +675,20 @@ class EditorWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(self, self.tr("about_title"), self.tr("about_text"))
 
+    def _refresh_output_table_headers(self):
+        if self.output_mode == "search":
+            self.output_table.setHorizontalHeaderLabels([
+                self.tr("table_search_fragment"),
+                self.tr("table_search_position"),
+                self.tr("table_search_length"),
+            ])
+        else:
+            self.output_table.setHorizontalHeaderLabels([
+                self.tr("table_err_fragment"),
+                self.tr("table_err_location"),
+                self.tr("table_err_desc"),
+            ])
+
     def go_to_error(self, row, column):
         item0 = self.output_table.item(row, 0)
         if not item0:
@@ -479,6 +696,19 @@ class EditorWindow(QMainWindow):
         data = item0.data(Qt.ItemDataRole.UserRole)
         if not data:
             return
+        if isinstance(data, dict) and data.get("type") == "abs":
+            try:
+                start = int(data["start"])
+                end = int(data["end"])
+            except (KeyError, TypeError, ValueError):
+                return
+            cursor = self.editor.textCursor()
+            cursor.setPosition(start)
+            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+            self.editor.setTextCursor(cursor)
+            self.editor.setFocus()
+            return
+
         line_num, pos_start, pos_end = data
         try:
             line_num = int(line_num)
@@ -499,8 +729,90 @@ class EditorWindow(QMainWindow):
         self.editor.setTextCursor(cursor)
         self.editor.setFocus()
 
+    def open_search_popup(self):
+        if self._search_popup is None:
+            self._search_popup = SearchPopup(self)
+        self._search_popup.retranslate()
+        self._position_search_popup(self._search_popup)
+        self._search_popup.show()
+        self._search_popup.raise_()
+        self._search_popup.activateWindow()
+        self._search_popup.find_input.setFocus()
+
+    def run_search_query(self, *, literal: bool, query: str):
+        self.output_mode = "search"
+        self._refresh_output_table_headers()
+        self.output_table.clearSpans()
+        self.output_table.setRowCount(0)
+        self._clear_editor_search_highlights()
+
+        text = self.editor.toPlainText()
+        if not text.strip():
+            self.analysis_result_label.setText(self.tr("search_count").format(0))
+            self.output_table.setColumnCount(3)
+            self.output_table.setRowCount(1)
+            item = QTableWidgetItem(self.tr("search_empty_text"))
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.output_table.setItem(0, 0, item)
+            self.output_table.setSpan(0, 0, 1, 3)
+            return
+
+        if literal:
+            matches = find_literal_matches(text, query)
+        else:
+            if not query.strip():
+                QMessageBox.warning(
+                    self,
+                    self.tr("error_title"),
+                    self.tr("search_regex_empty"),
+                )
+                return
+            try:
+                re.compile(query)
+            except re.error as e:
+                QMessageBox.warning(
+                    self, self.tr("error_title"), self.tr("search_regex_error").format(e)
+                )
+                return
+            matches = find_matches(text, query, re.MULTILINE)
+
+        n = len(matches)
+        self.analysis_result_label.setText(self.tr("search_count").format(n))
+        self.output_table.setColumnCount(3)
+
+        if n == 0:
+            self.output_table.setRowCount(1)
+            item = QTableWidgetItem(self.tr("search_no_matches"))
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.output_table.setItem(0, 0, item)
+            self.output_table.setSpan(0, 0, 1, 3)
+            self.output_table.resizeColumnsToContents()
+            self.output_table.horizontalHeader().setStretchLastSection(True)
+            return
+
+        self.output_table.setRowCount(n)
+        for i, m in enumerate(matches):
+            fragment = QTableWidgetItem(m.fragment)
+            location = QTableWidgetItem(
+                f"{self.tr('status_line')} {m.line}, "
+                f"{self.tr('status_column')} {m.column}"
+            )
+            length_item = QTableWidgetItem(str(m.length))
+            pos_data = {"type": "abs", "start": m.abs_start, "end": m.abs_end}
+            fragment.setData(Qt.ItemDataRole.UserRole, pos_data)
+
+            self.output_table.setItem(i, 0, fragment)
+            self.output_table.setItem(i, 1, location)
+            self.output_table.setItem(i, 2, length_item)
+
+        self.output_table.resizeColumnsToContents()
+        self.output_table.horizontalHeader().setStretchLastSection(True)
+        self._apply_editor_search_highlights(matches)
 
     def run_analysis(self):
+        self._clear_editor_search_highlights()
+        self.output_mode = "analysis"
+        self._refresh_output_table_headers()
         self.output_table.clearSpans()
         self.output_table.setRowCount(0)
         self.analysis_result_label.setText("")
