@@ -541,7 +541,6 @@ def format_ast_tree_pretty(node):
 
 
 def ast_node_to_json(obj):
-    """Сериализация AST в структуру для json.dumps."""
     if obj is None:
         return None
     if isinstance(obj, ProgramNode):

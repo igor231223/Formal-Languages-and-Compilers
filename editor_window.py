@@ -467,8 +467,6 @@ class EditorWindow(QMainWindow):
         semantic_tab = QWidget()
         semantic_layout = QVBoxLayout(semantic_tab)
         semantic_layout.setContentsMargins(4, 4, 4, 4)
-        # AST controls above the table: a stretched QTableWidget can otherwise overlap
-        # the row below it on a short splitter panel, stealing mouse clicks from the combo.
         semantic_layout.addWidget(self.semantic_ast_header)
         semantic_layout.addWidget(self.semantic_table, 1)
         semantic_layout.addWidget(self.semantic_ast, 1)
