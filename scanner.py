@@ -51,12 +51,14 @@ class Scanner:
         char = self.advance()
         start_pos = self.pos - self.line_start
 
-        # пробел
         if char == ' ':
             code, type_name = TOKEN_TYPES["WHITESPACE"]
             return Token(code, type_name, "(пробел)", self.line, start_pos, start_pos)
 
-        # перенос строки
+        if char == '\t':
+            code, type_name = TOKEN_TYPES["WHITESPACE"]
+            return Token(code, type_name, "(пробел)", self.line, start_pos, start_pos)
+
         if char == '\n':
             code, type_name = TOKEN_TYPES["NEWLINE"]
             token = Token(code, type_name, "\\n", self.line, start_pos, start_pos)
@@ -64,7 +66,6 @@ class Scanner:
             self.line_start = self.pos
             return token
 
-        # блоки
         if char == '{':
             code, type_name = TOKEN_TYPES["LBRACE"]
             return Token(code, type_name, char, self.line, start_pos, start_pos)
@@ -73,12 +74,10 @@ class Scanner:
             code, type_name = TOKEN_TYPES["RBRACE"]
             return Token(code, type_name, char, self.line, start_pos, start_pos)
 
-        # конец строки
         if char == ';':
             code, type_name = TOKEN_TYPES["SEMICOLON"]
             return Token(code, type_name, char, self.line, start_pos, start_pos)
 
-        # операторы сравнения
         if char in ['<', '>']:
             if self.match('='):
                 lexeme = char + '='
@@ -88,7 +87,6 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
                 return Token(code, type_name, char, self.line, start_pos, start_pos)
             
-        # оператор присваивания и сравнения
         if char == '=':
             if self.match('='):
                 code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
@@ -97,7 +95,6 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["ASSIGNMENT_OPERATOR"]
                 return Token(code, type_name, char, self.line, start_pos, start_pos)
 
-        # оператор неравенства
         if char == '!':
             if self.match('='):
                 code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
@@ -106,7 +103,6 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["ERROR"]
                 return Token(code, type_name, char, self.line, start_pos, start_pos)
 
-        # операторы и составные операторы присваивания
         if char in ['+', '-', '*', '/']:
             if self.match('='):
                 lexeme = char + '='
@@ -116,8 +112,6 @@ class Scanner:
                 code, type_name = TOKEN_TYPES["ARITHMETIC_OPERATOR"]
                 return Token(code, type_name, char, self.line, start_pos, start_pos)
 
-
-        # числа
         if char.isdigit():
             lexeme = char
             while not self.is_at_end() and self.peek().isdigit():
@@ -134,11 +128,22 @@ class Scanner:
             end_pos = start_pos + len(lexeme) - 1
             return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
-        # идентификаторы
         if char.isalpha():
             lexeme = char
-            while not self.is_at_end() and self.peek().isalnum():
+            while (
+                not self.is_at_end()
+                and self.peek().isascii()
+                and self.peek().isalnum()
+            ):
                 lexeme += self.advance()
+
+            if not self.is_at_end() and not self.could_start_token(self.peek()):
+                lexeme += self.advance()
+                while not self.is_at_end() and self.peek().isalnum():
+                    lexeme += self.advance()
+                code, type_name = TOKEN_TYPES["ERROR"]
+                end_pos = start_pos + len(lexeme) - 1
+                return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
             if lexeme == "repeat":
                 code, type_name = TOKEN_TYPES["REPEAT"]
@@ -166,11 +171,13 @@ class Scanner:
     def could_start_token(self, c):
         if c == "\0":
             return False
-        if c in " \n":
+        if c in " \n\t":
             return True
         if c in "{};":
             return True
         if c in "<>=":
+            return True
+        if c == "!":
             return True
         if c in "+-*/":
             return True

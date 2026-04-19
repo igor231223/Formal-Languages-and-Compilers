@@ -2,15 +2,17 @@ import os
 import sys
 import json
 
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, QRect, QEvent
 from PyQt6.QtGui import (
     QFont,
     QKeySequence,
     QAction,
     QIcon,
     QColor,
+    QPalette,
     QTextCursor,
     QTextCharFormat,
+    QPainter,
 )
 from PyQt6.QtWidgets import (
     QMainWindow,
@@ -18,7 +20,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QSplitter,
-    QTextEdit,
+    QPlainTextEdit,
     QFileDialog,
     QMessageBox,
     QToolBar,
@@ -31,13 +33,121 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QToolButton,
+    QTabWidget,
+    QTextEdit,
+    QDialog,
+    QTextBrowser,
+    QDialogButtonBox,
 )
 
 import re
 
 from regex_search import find_literal_matches, find_matches
-from scanner import Scanner
+from scanner import Scanner, TOKEN_TYPES
 from parser import analyze_syntax
+
+
+class LineNum(QWidget):
+    def __init__(self, editor: "NumberedPlainTextEdit"):
+        super().__init__(editor)
+        self._editor = editor
+
+    def sizeHint(self):
+        return QSize(self._editor.line_number_area_width(), 0)
+
+    def paintEvent(self, event):
+        self._editor.line_number_area_paint_event(event)
+
+
+class NumberedPlainTextEdit(QPlainTextEdit):
+    def __init__(self):
+        super().__init__()
+        self.line_number_area = LineNum(self)
+        self.line_number_area.setAutoFillBackground(True)
+        self._sync_line_number_palette()
+        self.blockCountChanged.connect(self.update_line_number_area_width)
+        self.updateRequest.connect(self.update_line_number_area)
+        self.cursorPositionChanged.connect(self.update_line_number_area_cursor)
+        self.update_line_number_area_width()
+
+    def line_number_area_width(self):
+        digits = 1
+        n = max(1, self.blockCount())
+        v = n
+        while v >= 10:
+            v //= 10
+            digits += 1
+        space = 8 + self.fontMetrics().horizontalAdvance("9") * digits
+        return space
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        cr = self.contentsRect()
+        w = self.line_number_area_width()
+        self.line_number_area.setGeometry(QRect(0, cr.top(), w, cr.height()))
+        self.line_number_area.raise_()
+
+    def update_line_number_area_width(self):
+        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+
+    def update_line_number_area(self, rect, dy):
+        if dy:
+            self.line_number_area.scroll(0, dy)
+        else:
+            self.line_number_area.update(
+                0, rect.y(), self.line_number_area.width(), rect.height()
+            )
+        if rect.contains(self.viewport().rect()):
+            w = self.line_number_area_width()
+            self.line_number_area.update(0, rect.y(), w, rect.height())
+
+    def update_line_number_area_cursor(self):
+        self.line_number_area.update(
+            0,
+            0,
+            self.line_number_area.width(),
+            self.line_number_area.height(),
+        )
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.PaletteChange:
+            self._sync_line_number_palette()
+            self.line_number_area.update()
+        super().changeEvent(event)
+
+    def _sync_line_number_palette(self):
+        self.line_number_area.setPalette(self.palette())
+
+    def line_number_area_paint_event(self, event):
+        painter = QPainter(self.line_number_area)
+        pal = self.palette()
+        zalivka = pal.color(QPalette.ColorRole.Window)
+        if not zalivka.isValid():
+            zalivka = pal.color(QPalette.ColorRole.Mid)
+        painter.fillRect(event.rect(), zalivka)
+        block = self.firstVisibleBlock()
+        if not block.isValid():
+            return
+        block_number = block.blockNumber()
+        top = int(self.blockBoundingRect(block).translated(self.contentOffset()).top())
+        bottom = top + int(self.blockBoundingRect(block).height())
+        height = self.fontMetrics().height()
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and bottom >= event.rect().top():
+                number = str(block_number + 1)
+                painter.setPen(pal.color(QPalette.ColorRole.WindowText))
+                painter.drawText(
+                    0,
+                    top,
+                    self.line_number_area.width() - 4,
+                    height,
+                    Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+                    number,
+                )
+            block = block.next()
+            top = bottom
+            bottom = top + int(self.blockBoundingRect(block).height())
+            block_number += 1
 
 
 class SearchPopup(QWidget):
@@ -159,12 +269,11 @@ class SearchPopup(QWidget):
 class EditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
+        
         self.current_file = None
         self.is_dirty = False
         self.current_lang = "ru"
         self.trans = {}
-        self.output_mode = "analysis"
         self._search_popup = None
 
         self.setMinimumHeight(500)
@@ -180,7 +289,15 @@ class EditorWindow(QMainWindow):
 
         self.editor.textChanged.connect(self.on_text_changed)
         self.editor.textChanged.connect(self._clear_editor_search_highlights)
-        self.output_table.cellClicked.connect(self.go_to_error)
+        self.lexer_table.cellClicked.connect(
+            lambda r, c: self.go_to_error_cell(self.lexer_table, r, c)
+        )
+        self.parser_table.cellClicked.connect(
+            lambda r, c: self.go_to_error_cell(self.parser_table, r, c)
+        )
+        self.search_table.cellClicked.connect(
+            lambda r, c: self.go_to_error_cell(self.search_table, r, c)
+        )
         
         self.editor.cursorPositionChanged.connect(self.update_cursor_status)
 
@@ -206,7 +323,6 @@ class EditorWindow(QMainWindow):
     def retranslate_ui(self):
         self.setWindowTitle(self.tr("app_title"))
 
-        # Text for menu
         self.menu_new.setText(self.tr("file_new"))
         self.menu_open.setText(self.tr("file_open"))
         self.menu_save.setText(self.tr("file_save"))
@@ -228,7 +344,6 @@ class EditorWindow(QMainWindow):
         self.help_act.setText(self.tr("help_help"))
         self.about_act.setText(self.tr("help_about"))
 
-        # Text for tooltips
         self.tb_about.setToolTip(self.tr("about_title"))
         self.tb_help.setToolTip(self.tr("help_help"))
         self.tb_paste.setToolTip(self.tr("edit_paste"))
@@ -244,7 +359,11 @@ class EditorWindow(QMainWindow):
         if getattr(self, "search_tool_button", None):
             self.search_tool_button.setToolTip(self.tr("search_action"))
 
-        # Recreate menu + toolbar
+        if getattr(self, "output_tabs", None):
+            self.output_tabs.setTabText(0, self.tr("output_tab_lexer"))
+            self.output_tabs.setTabText(1, self.tr("output_tab_parser"))
+            self.output_tabs.setTabText(2, self.tr("output_tab_search"))
+
         self.menuBar().clear()
         self.create_menus()
 
@@ -252,7 +371,7 @@ class EditorWindow(QMainWindow):
             self.removeToolBar(toolbar)
         self.create_toolbar()
 
-        self._refresh_output_table_headers()
+        self._refresh_output_tabs_headers()
 
         if self._search_popup is not None:
             self._search_popup.retranslate()
@@ -268,35 +387,67 @@ class EditorWindow(QMainWindow):
         self.splitter = QSplitter(Qt.Orientation.Vertical)
         layout.addWidget(self.splitter)
 
-        self.editor = QTextEdit()
+        self.editor = NumberedPlainTextEdit()
         self.editor.setFont(QFont("Consolas", 12))
-        self.editor.setTabStopDistance(4 * self.editor.fontMetrics().horizontalAdvance(" "))
+        self.editor.setTabStopDistance(
+            4 * self.editor.fontMetrics().horizontalAdvance(" ")
+        )
         self.splitter.addWidget(self.editor)
 
         self.status_label = QLabel()
         self.statusBar().addPermanentWidget(self.status_label)
 
-        self.output_table = QTableWidget()
-        self.output_table.setColumnCount(3)
-        self.output_table.setHorizontalHeaderLabels(
-            ["Фрагмент", "Местоположение", "Описание"]
-        )
-        self.output_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.output_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.output_table.verticalHeader().setVisible(False)
-        self.output_table.horizontalHeader().setStretchLastSection(True)
-        self.output_table.setFont(QFont("Consolas", 11))
+        self.output_tabs = QTabWidget()
+        self.output_tabs.setFont(QFont("Consolas", 10))
+
+        self.lexer_summary_label = QLabel()
+        self.lexer_summary_label.setWordWrap(True)
+        self.lexer_table = QTableWidget()
+        self._configure_results_table(self.lexer_table, 4)
+        lexer_tab = QWidget()
+        lexer_layout = QVBoxLayout(lexer_tab)
+        lexer_layout.setContentsMargins(4, 4, 4, 4)
+        lexer_layout.addWidget(self.lexer_summary_label)
+        lexer_layout.addWidget(self.lexer_table)
+        self.output_tabs.addTab(lexer_tab, "Lexer")
+
+        self.parser_summary_label = QLabel()
+        self.parser_summary_label.setWordWrap(True)
+        self.parser_table = QTableWidget()
+        self._configure_results_table(self.parser_table, 3)
+        parser_tab = QWidget()
+        parser_layout = QVBoxLayout(parser_tab)
+        parser_layout.setContentsMargins(4, 4, 4, 4)
+        parser_layout.addWidget(self.parser_summary_label)
+        parser_layout.addWidget(self.parser_table)
+        self.output_tabs.addTab(parser_tab, "Parser")
+
+        self.search_summary_label = QLabel()
+        self.search_summary_label.setWordWrap(True)
+        self.search_table = QTableWidget()
+        self._configure_results_table(self.search_table, 3)
+        search_tab = QWidget()
+        search_layout = QVBoxLayout(search_tab)
+        search_layout.setContentsMargins(4, 4, 4, 4)
+        search_layout.addWidget(self.search_summary_label)
+        search_layout.addWidget(self.search_table)
+        self.output_tabs.addTab(search_tab, "Search")
 
         self.output_panel = QWidget()
         output_layout = QVBoxLayout(self.output_panel)
-        output_layout.setContentsMargins(4, 4, 4, 4)
-        self.analysis_result_label = QLabel()
-        self.analysis_result_label.setWordWrap(True)
-        output_layout.addWidget(self.analysis_result_label)
-        output_layout.addWidget(self.output_table)
+        output_layout.setContentsMargins(0, 0, 0, 0)
+        output_layout.addWidget(self.output_tabs)
         self.splitter.addWidget(self.output_panel)
 
         self.splitter.setSizes([550, 200])
+
+    def _configure_results_table(self, table, columns):
+        table.setColumnCount(columns)
+        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setStretchLastSection(True)
+        table.setFont(QFont("Consolas", 11))
 
     def _clear_editor_search_highlights(self):
         self.editor.setExtraSelections([])
@@ -336,8 +487,6 @@ class EditorWindow(QMainWindow):
         popup.move(x, y)
 
     def create_actions(self):
-        # Menu actions
-        # File
         self.menu_new = QAction(self)
         self.menu_new.setShortcut(QKeySequence("Ctrl+N"))
         self.menu_new.triggered.connect(self.new_file)
@@ -382,7 +531,6 @@ class EditorWindow(QMainWindow):
         self.menu_select_all.setShortcut(QKeySequence("Ctrl+A"))
         self.menu_select_all.triggered.connect(self.editor.selectAll)
 
-        # Run
         self.menu_run = QAction(self)
         self.menu_run.setShortcut(QKeySequence("F5"))
         self.menu_run.triggered.connect(self.run_analysis)
@@ -391,7 +539,6 @@ class EditorWindow(QMainWindow):
         self.menu_search.setShortcut(QKeySequence("Ctrl+F"))
         self.menu_search.triggered.connect(self.open_search_popup)
 
-        # Language
         self.lang_ru_act = QAction(self)
         self.lang_ru_act.setCheckable(True)
         self.lang_ru_act.setChecked(True)
@@ -401,7 +548,6 @@ class EditorWindow(QMainWindow):
         self.lang_en_act.setCheckable(True)
         self.lang_en_act.triggered.connect(lambda: self.switch_language("en"))
 
-        # Help
         self.help_act = QAction(self)
         self.help_act.setShortcut(QKeySequence("F1"))
         self.help_act.triggered.connect(self.show_help)
@@ -409,7 +555,6 @@ class EditorWindow(QMainWindow):
         self.about_act = QAction(self)
         self.about_act.triggered.connect(self.show_about)
 
-        # Toolbar actions
         self.tb_run = QAction(self)
         self.tb_run.setIcon(QIcon(resource_path("icons/run.svg")))
         self.tb_run.triggered.connect(self.run_analysis)
@@ -650,7 +795,19 @@ class EditorWindow(QMainWindow):
 
     def show_help(self):
         help_text = self.get_detailed_help()
-        QMessageBox.information(self, self.tr("help_help"), help_text)
+        dlg = QDialog(self)
+        dlg.setWindowTitle(self.tr("help_help"))
+        dlg.resize(640, 480)
+        layout = QVBoxLayout(dlg)
+        browser = QTextBrowser(dlg)
+        browser.setReadOnly(True)
+        browser.setOpenExternalLinks(True)
+        browser.setHtml(help_text)
+        layout.addWidget(browser)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        buttons.accepted.connect(dlg.accept)
+        layout.addWidget(buttons)
+        dlg.exec()
 
     def get_detailed_help(self):
         sections = [
@@ -675,22 +832,26 @@ class EditorWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(self, self.tr("about_title"), self.tr("about_text"))
 
-    def _refresh_output_table_headers(self):
-        if self.output_mode == "search":
-            self.output_table.setHorizontalHeaderLabels([
-                self.tr("table_search_fragment"),
-                self.tr("table_search_position"),
-                self.tr("table_search_length"),
-            ])
-        else:
-            self.output_table.setHorizontalHeaderLabels([
-                self.tr("table_err_fragment"),
-                self.tr("table_err_location"),
-                self.tr("table_err_desc"),
-            ])
+    def _refresh_output_tabs_headers(self):
+        self.lexer_table.setHorizontalHeaderLabels([
+            self.tr("table_code"),
+            self.tr("table_type"),
+            self.tr("table_lexeme"),
+            self.tr("table_location"),
+        ])
+        self.parser_table.setHorizontalHeaderLabels([
+            self.tr("table_err_fragment"),
+            self.tr("table_err_location"),
+            self.tr("table_err_desc"),
+        ])
+        self.search_table.setHorizontalHeaderLabels([
+            self.tr("table_search_fragment"),
+            self.tr("table_search_position"),
+            self.tr("table_search_length"),
+        ])
 
-    def go_to_error(self, row, column):
-        item0 = self.output_table.item(row, 0)
+    def go_to_error_cell(self, table, row, column):
+        item0 = table.item(row, 0)
         if not item0:
             return
         data = item0.data(Qt.ItemDataRole.UserRole)
@@ -740,21 +901,21 @@ class EditorWindow(QMainWindow):
         self._search_popup.find_input.setFocus()
 
     def run_search_query(self, *, literal: bool, query: str):
-        self.output_mode = "search"
-        self._refresh_output_table_headers()
-        self.output_table.clearSpans()
-        self.output_table.setRowCount(0)
+        self._refresh_output_tabs_headers()
+        self.search_table.clearSpans()
+        self.search_table.setRowCount(0)
         self._clear_editor_search_highlights()
 
         text = self.editor.toPlainText()
         if not text.strip():
-            self.analysis_result_label.setText(self.tr("search_count").format(0))
-            self.output_table.setColumnCount(3)
-            self.output_table.setRowCount(1)
+            self.search_summary_label.setText(self.tr("search_count").format(0))
+            self.search_table.setColumnCount(3)
+            self.search_table.setRowCount(1)
             item = QTableWidgetItem(self.tr("search_empty_text"))
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.output_table.setItem(0, 0, item)
-            self.output_table.setSpan(0, 0, 1, 3)
+            self.search_table.setItem(0, 0, item)
+            self.search_table.setSpan(0, 0, 1, 3)
+            self.output_tabs.setCurrentIndex(2)
             return
 
         if literal:
@@ -777,20 +938,21 @@ class EditorWindow(QMainWindow):
             matches = find_matches(text, query, re.MULTILINE)
 
         n = len(matches)
-        self.analysis_result_label.setText(self.tr("search_count").format(n))
-        self.output_table.setColumnCount(3)
+        self.search_summary_label.setText(self.tr("search_count").format(n))
+        self.search_table.setColumnCount(3)
 
         if n == 0:
-            self.output_table.setRowCount(1)
+            self.search_table.setRowCount(1)
             item = QTableWidgetItem(self.tr("search_no_matches"))
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.output_table.setItem(0, 0, item)
-            self.output_table.setSpan(0, 0, 1, 3)
-            self.output_table.resizeColumnsToContents()
-            self.output_table.horizontalHeader().setStretchLastSection(True)
+            self.search_table.setItem(0, 0, item)
+            self.search_table.setSpan(0, 0, 1, 3)
+            self.search_table.resizeColumnsToContents()
+            self.search_table.horizontalHeader().setStretchLastSection(True)
+            self.output_tabs.setCurrentIndex(2)
             return
 
-        self.output_table.setRowCount(n)
+        self.search_table.setRowCount(n)
         for i, m in enumerate(matches):
             fragment = QTableWidgetItem(m.fragment)
             location = QTableWidgetItem(
@@ -801,50 +963,100 @@ class EditorWindow(QMainWindow):
             pos_data = {"type": "abs", "start": m.abs_start, "end": m.abs_end}
             fragment.setData(Qt.ItemDataRole.UserRole, pos_data)
 
-            self.output_table.setItem(i, 0, fragment)
-            self.output_table.setItem(i, 1, location)
-            self.output_table.setItem(i, 2, length_item)
+            self.search_table.setItem(i, 0, fragment)
+            self.search_table.setItem(i, 1, location)
+            self.search_table.setItem(i, 2, length_item)
 
-        self.output_table.resizeColumnsToContents()
-        self.output_table.horizontalHeader().setStretchLastSection(True)
+        self.search_table.resizeColumnsToContents()
+        self.search_table.horizontalHeader().setStretchLastSection(True)
         self._apply_editor_search_highlights(matches)
+        self.output_tabs.setCurrentIndex(2)
 
     def run_analysis(self):
         self._clear_editor_search_highlights()
-        self.output_mode = "analysis"
-        self._refresh_output_table_headers()
-        self.output_table.clearSpans()
-        self.output_table.setRowCount(0)
-        self.analysis_result_label.setText("")
+        self._refresh_output_tabs_headers()
+        self.lexer_table.clearSpans()
+        self.lexer_table.setRowCount(0)
+        self.parser_table.clearSpans()
+        self.parser_table.setRowCount(0)
+        self.lexer_summary_label.setText("")
+        self.parser_summary_label.setText("")
         text = self.editor.toPlainText()
 
         if not text.strip():
-            self.output_table.setColumnCount(3)
-            self.output_table.setRowCount(1)
+            self.lexer_table.setColumnCount(4)
+            self.lexer_table.setRowCount(1)
             item = QTableWidgetItem(self.tr("analysis_empty"))
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.output_table.setItem(0, 0, item)
-            self.output_table.setSpan(0, 0, 1, 3)
-            self.analysis_result_label.setText(self.tr("analysis_error_count").format(0))
+            self.lexer_table.setItem(0, 0, item)
+            self.lexer_table.setSpan(0, 0, 1, 4)
+            self.parser_table.setColumnCount(3)
+            self.parser_table.setRowCount(1)
+            item2 = QTableWidgetItem(self.tr("analysis_empty"))
+            item2.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.parser_table.setItem(0, 0, item2)
+            self.parser_table.setSpan(0, 0, 1, 3)
+            self.lexer_summary_label.setText(self.tr("lexer_token_count").format(0))
+            self.parser_summary_label.setText(self.tr("analysis_error_count").format(0))
+            self.output_tabs.setCurrentIndex(1)
             return
 
         scanner = Scanner(text)
         tokens = scanner.scan_tokens()
         result = analyze_syntax(tokens)
 
-        self.output_table.setColumnCount(3)
+        self._fill_lexer_table(tokens)
+        self._fill_parser_table(result)
 
+        self.lexer_table.resizeColumnsToContents()
+        self.lexer_table.horizontalHeader().setStretchLastSection(True)
+        self.parser_table.resizeColumnsToContents()
+        self.parser_table.horizontalHeader().setStretchLastSection(True)
+        self.output_tabs.setCurrentIndex(1)
+
+    def _fill_lexer_table(self, tokens):
+        self.lexer_table.clearSpans()
+        self.lexer_table.setColumnCount(4)
+        n = len(tokens)
+        self.lexer_summary_label.setText(self.tr("lexer_token_count").format(n))
+        self.lexer_table.setRowCount(n)
+        err_code = TOKEN_TYPES["ERROR"][0]
+        err_bg = QColor(255, 0, 0)
+        for i, tok in enumerate(tokens):
+            code_item = QTableWidgetItem(str(tok.code))
+            type_item = QTableWidgetItem(tok.type_name)
+            lex_item = QTableWidgetItem(tok.lexeme)
+            loc = (
+                f"{self.tr('status_line')} {tok.line}, "
+                f"{self.tr('err_position')} {tok.start_pos}-{tok.end_pos}"
+            )
+            loc_item = QTableWidgetItem(loc)
+            pos_data = (tok.line, tok.start_pos, tok.end_pos)
+            code_item.setData(Qt.ItemDataRole.UserRole, pos_data)
+            if tok.code == err_code:
+                for item in (code_item, type_item, lex_item, loc_item):
+                    item.setBackground(err_bg)
+            self.lexer_table.setItem(i, 0, code_item)
+            self.lexer_table.setItem(i, 1, type_item)
+            self.lexer_table.setItem(i, 2, lex_item)
+            self.lexer_table.setItem(i, 3, loc_item)
+
+    def _fill_parser_table(self, result):
+        self.parser_table.clearSpans()
+        self.parser_table.setColumnCount(3)
         if result.ok:
-            self.output_table.setRowCount(1)
+            self.parser_table.setRowCount(1)
             msg = QTableWidgetItem(self.tr("analysis_ok"))
             msg.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.output_table.setItem(0, 0, msg)
-            self.output_table.setSpan(0, 0, 1, 3)
-            self.analysis_result_label.setText(self.tr("analysis_error_count").format(0))
+            self.parser_table.setItem(0, 0, msg)
+            self.parser_table.setSpan(0, 0, 1, 3)
+            self.parser_summary_label.setText(self.tr("analysis_error_count").format(0))
         else:
             errors_num = len(result.errors)
-            self.analysis_result_label.setText(self.tr("analysis_error_count").format(errors_num))
-            self.output_table.setRowCount(errors_num)
+            self.parser_summary_label.setText(
+                self.tr("analysis_error_count").format(errors_num)
+            )
+            self.parser_table.setRowCount(errors_num)
             for i, err in enumerate(result.errors):
                 fragment = QTableWidgetItem(err.fragment)
                 location = QTableWidgetItem(
@@ -857,12 +1069,9 @@ class EditorWindow(QMainWindow):
                 fragment.setBackground(QColor(255, 0, 0))
                 location.setBackground(QColor(255, 0, 0))
                 description.setBackground(QColor(255, 0, 0))
-                self.output_table.setItem(i, 0, fragment)
-                self.output_table.setItem(i, 1, location)
-                self.output_table.setItem(i, 2, description)
-
-        self.output_table.resizeColumnsToContents()
-        self.output_table.horizontalHeader().setStretchLastSection(True)
+                self.parser_table.setItem(i, 0, fragment)
+                self.parser_table.setItem(i, 1, location)
+                self.parser_table.setItem(i, 2, description)
 
 
 

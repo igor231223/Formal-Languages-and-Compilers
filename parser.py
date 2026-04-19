@@ -3,6 +3,7 @@ from scanner import TOKEN_TYPES
 CODE_REPEAT = 1
 CODE_WHILE = 2
 CODE_IDENTIFIER = 3
+CODE_WHITESPACE = 4
 CODE_LBRACE = 5
 CODE_COMPOUND_ASSIGN = 6
 CODE_DIGIT = 7
@@ -46,7 +47,7 @@ class Parser:
         if ok and not self.eof():
             t = self.peek()
             self.add_err(
-                "Лишние символы после завершения конструкции repeat-while",
+                "Лишние символы после завершения конструкции",
                 t.lexeme,
                 t.line,
                 t.start_pos,
@@ -57,6 +58,18 @@ class Parser:
 
     def peek(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
+
+    def peek_ahead(self, offset):
+        i = self.pos + offset
+        return self.tokens[i] if i < len(self.tokens) else None
+
+    def first_non_nl_from_index(self, i):
+        while i < len(self.tokens):
+            t = self.tokens[i]
+            if t.code not in (CODE_NEWLINE, CODE_WHITESPACE):
+                return t
+            i += 1
+        return None
 
     def advance(self):
         if self.pos < len(self.tokens):
@@ -120,18 +133,182 @@ class Parser:
             self.err_here("Ожидалось ключевое слово repeat")
             return False
 
+        got_repeat = False
         if t.code == CODE_REPEAT:
             self.advance()
+            got_repeat = True
         else:
             self.err_here("Ожидалось ключевое слово repeat")
-            if t.code != CODE_LBRACE:
-                self.sync_to(CODE_LBRACE)
-                if self.eof():
-                    return False
 
         self.skip_nl()
         if not self.take(CODE_LBRACE):
-            self.err_here("Ожидался символ '{'")
+            if got_repeat:
+                while self.peek():
+                    c = self.peek().code
+                    if c == CODE_RBRACE:
+                        t = self.peek()
+                        self.add_err(
+                            "Символ '}' здесь недопустим: перед телом цикла должна быть '{'",
+                            t.lexeme,
+                            t.line,
+                            t.start_pos,
+                            t.end_pos,
+                        )
+                        self.advance()
+                        continue
+                    if c == CODE_SEMICOLON:
+                        t = self.peek()
+                        self.add_err(
+                            "Символ ';' здесь недопустим: после «repeat» ожидается '{' перед телом цикла",
+                            t.lexeme,
+                            t.line,
+                            t.start_pos,
+                            t.end_pos,
+                        )
+                        self.advance()
+                        continue
+                    if c == CODE_WHILE:
+                        nxt = self.first_non_nl_from_index(self.pos + 1)
+                        if nxt and nxt.code in (
+                            CODE_RBRACE,
+                            CODE_LBRACE,
+                            CODE_WHILE,
+                            CODE_IDENTIFIER,
+                        ):
+                            t = self.peek()
+                            self.add_err(
+                                "Ключевое слово while здесь лишнее: после «repeat» ожидается '{' перед телом цикла",
+                                t.lexeme,
+                                t.line,
+                                t.start_pos,
+                                t.end_pos,
+                            )
+                            self.advance()
+                            continue
+                    if c == CODE_REPEAT:
+                        t = self.peek()
+                        self.add_err(
+                            "Лишнее ключевое слово repeat: перед телом цикла достаточно одного repeat и символа '{'",
+                            t.lexeme,
+                            t.line,
+                            t.start_pos,
+                            t.end_pos,
+                        )
+                        self.advance()
+                        continue
+                    if c == CODE_IDENTIFIER:
+                        nxt = self.first_non_nl_from_index(self.pos + 1)
+                        if nxt and nxt.code == CODE_LBRACE:
+                            t = self.peek()
+                            self.add_err(
+                                "Лишний идентификатор перед '{': после repeat должна следовать только '{'",
+                                t.lexeme,
+                                t.line,
+                                t.start_pos,
+                                t.end_pos,
+                            )
+                            self.advance()
+                            continue
+                        if nxt and nxt.code == CODE_IDENTIFIER:
+                            t = self.peek()
+                            self.add_err(
+                                "Лишний идентификатор перед телом цикла (ожидалась '{' после repeat)",
+                                t.lexeme,
+                                t.line,
+                                t.start_pos,
+                                t.end_pos,
+                            )
+                            self.advance()
+                            continue
+                    if c == CODE_DIGIT:
+                        nxt = self.first_non_nl_from_index(self.pos + 1)
+                        if nxt and nxt.code == CODE_LBRACE:
+                            t = self.peek()
+                            self.add_err(
+                                "Лишний числовой литерал перед '{': после «repeat» должна следовать только '{'",
+                                t.lexeme,
+                                t.line,
+                                t.start_pos,
+                                t.end_pos,
+                            )
+                            self.advance()
+                            continue
+                    break
+                self.skip_nl()
+                if not self.take(CODE_LBRACE):
+                    self.err_here("Ожидался символ '{'")
+            else:
+                while self.peek():
+                    c = self.peek().code
+                    if c == CODE_RBRACE:
+                        t = self.peek()
+                        self.add_err(
+                            "Символ '}' здесь недопустим: перед телом цикла должна быть '{'",
+                            t.lexeme,
+                            t.line,
+                            t.start_pos,
+                            t.end_pos,
+                        )
+                        self.advance()
+                        continue
+                    if c == CODE_SEMICOLON:
+                        t = self.peek()
+                        self.add_err(
+                            "Символ ';' здесь недопустим: перед телом цикла ожидается '{'",
+                            t.lexeme,
+                            t.line,
+                            t.start_pos,
+                            t.end_pos,
+                        )
+                        self.advance()
+                        continue
+                    if c == CODE_WHILE:
+                        nxt = self.first_non_nl_from_index(self.pos + 1)
+                        if nxt and nxt.code in (
+                            CODE_RBRACE,
+                            CODE_LBRACE,
+                            CODE_WHILE,
+                            CODE_IDENTIFIER,
+                        ):
+                            t = self.peek()
+                            self.add_err(
+                                "Ключевое слово while здесь лишнее: после «repeat» ожидается '{' перед телом цикла",
+                                t.lexeme,
+                                t.line,
+                                t.start_pos,
+                                t.end_pos,
+                            )
+                            self.advance()
+                            continue
+                    if c == CODE_REPEAT:
+                        t = self.peek()
+                        self.add_err(
+                            "Лишнее ключевое слово repeat: перед телом цикла достаточно одного repeat и символа '{'",
+                            t.lexeme,
+                            t.line,
+                            t.start_pos,
+                            t.end_pos,
+                        )
+                        self.advance()
+                        continue
+                    if c == CODE_IDENTIFIER:
+                        nxt = self.first_non_nl_from_index(self.pos + 1)
+                        if nxt and nxt.code == CODE_LBRACE:
+                            self.advance()
+                            continue
+                        if nxt and nxt.code == CODE_IDENTIFIER:
+                            break
+                        break
+                    if c == CODE_DIGIT:
+                        nxt = self.first_non_nl_from_index(self.pos + 1)
+                        if nxt and nxt.code == CODE_LBRACE:
+                            self.advance()
+                            continue
+                        break
+                    break
+                self.skip_nl()
+                if not self.take(CODE_LBRACE):
+                    self.err_here("Ожидался символ '{'")
 
         self.stmt_list()
 
@@ -139,13 +316,53 @@ class Parser:
         self.expect(CODE_RBRACE, "Ожидался символ '}'", CODE_WHILE)
 
         self.skip_nl()
+        while self.peek() and self.peek().code == CODE_RBRACE:
+            nxt = self.first_non_nl_from_index(self.pos + 1)
+            if nxt is None:
+                break
+            t = self.peek()
+            if nxt.code == CODE_WHILE:
+                self.add_err(
+                    "Лишняя '}' перед while: перед условием должна остаться одна '}' после тела",
+                    t.lexeme,
+                    t.line,
+                    t.start_pos,
+                    t.end_pos,
+                )
+                self.advance()
+                self.skip_nl()
+                continue
+            if nxt.code == CODE_RBRACE:
+                self.add_err(
+                    "Лишняя '}' в конце тела цикла: лишние закрывающие скобки",
+                    t.lexeme,
+                    t.line,
+                    t.start_pos,
+                    t.end_pos,
+                )
+                self.advance()
+                self.skip_nl()
+                continue
+            break
         if not self.expect(CODE_WHILE, "Ожидалось ключевое слово while"):
             self.skip_nl()
-            if not self.eof():
-                self.logical_expr()
-                self.skip_nl()
-                self.expect(CODE_SEMICOLON, "Ожидался символ ';' в конце конструкции")
-            return True
+            self.sync_to(CODE_SEMICOLON)
+            self.skip_nl()
+            if not self.take(CODE_SEMICOLON):
+                if self.eof() and self.pos > 0:
+                    prev = self.tokens[self.pos - 1]
+                    self.add_err(
+                        "Ожидался символ ';' в конце конструкции",
+                        "EOF",
+                        prev.line,
+                        prev.end_pos,
+                        prev.end_pos,
+                    )
+                elif not self.eof():
+                    self.err_here(
+                        "Ожидался символ ';' в конце конструкции"
+                    )
+            return False
 
         self.skip_nl()
         self.logical_expr()
@@ -161,22 +378,17 @@ class Parser:
             t = self.peek()
             if t is None or t.code == CODE_RBRACE or t.code == CODE_WHILE:
                 return
-            if self.is_maybe_condition_start():
-                return
+            if t.code == CODE_LBRACE:
+                self.add_err(
+                    "Лишняя '{' в теле цикла: оператор — это идентификатор и присваивание",
+                    t.lexeme,
+                    t.line,
+                    t.start_pos,
+                    t.end_pos,
+                )
+                self.advance()
+                continue
             self.stmt()
-
-    def is_maybe_condition_start(self):
-        t = self.peek()
-        if t is None:
-            return False
-        if t.code == CODE_NOT:
-            return True
-        if t.code != CODE_IDENTIFIER:
-            return False
-        if self.pos + 1 >= len(self.tokens):
-            return False
-        nxt = self.tokens[self.pos + 1]
-        return nxt.code == CODE_COMPARE
 
     def stmt(self):
         t = self.peek()
@@ -221,7 +433,6 @@ class Parser:
                 op.start_pos,
                 op.end_pos,
             )
-            self.add_err("Ожидалось выражение (идентификатор или число)", "", t.line if t.code == CODE_IDENTIFIER else op.line, t.end_pos if t.code == CODE_IDENTIFIER else op.start_pos, t.end_pos if t.code == CODE_IDENTIFIER else op.start_pos)
             self.syncstmt()
             return
 
@@ -231,13 +442,48 @@ class Parser:
 
         nxt = self.peek()
         if nxt is None:
-            self.add_err("Ожидался символ ';' или конец строки перед '}'", "EOF", op.line, op.end_pos, op.end_pos)
+            self.add_err("Ожидался символ ';' в конце конструкции", "EOF", op.line, op.end_pos, op.end_pos)
             return
         if nxt.code == CODE_SEMICOLON:
             self.advance()
             return
-        if nxt.code in (CODE_RBRACE, CODE_IDENTIFIER):
+        if nxt.code == CODE_RBRACE:
             return
+        if nxt.code == CODE_IDENTIFIER:
+            after = self.peek_ahead(1)
+            if after and after.code == CODE_COMPARE:
+                self.syncstmt()
+                return
+            self.add_err(
+                "Ожидался символ ';' в конце оператора перед следующим оператором",
+                nxt.lexeme,
+                nxt.line,
+                nxt.start_pos,
+                nxt.end_pos,
+            )
+            self.syncstmt()
+            return
+        if nxt.code == CODE_WHILE:
+            return
+        if nxt.code == CODE_COMPARE:
+            self.add_err(
+                "Ожидался символ ';' в конце оператора (нельзя писать сравнение сразу после выражения)",
+                nxt.lexeme,
+                nxt.line,
+                nxt.start_pos,
+                nxt.end_pos,
+            )
+            self.syncstmt()
+            return
+        self.add_err(
+            "Ожидался символ ';' в конце оператора",
+            nxt.lexeme,
+            nxt.line,
+            nxt.start_pos,
+            nxt.end_pos,
+        )
+        self.syncstmt()
+        return
 
     def expr(self):
         self.term()
@@ -287,6 +533,12 @@ class Parser:
             self.sync_to(CODE_SEMICOLON)
         elif self.peek() and self.peek().code == CODE_IDENTIFIER:
             self.err_here("Ожидается логический оператор (and, or) перед %s" % self.peek().lexeme)
+            self.sync_to(CODE_SEMICOLON)
+        elif self.peek() and self.peek().code == CODE_DIGIT:
+            self.err_here(
+                "Ожидается логический оператор (and, or) или конец условия «;» перед числом «%s»"
+                % self.peek().lexeme
+            )
             self.sync_to(CODE_SEMICOLON)
 
     def logical_or_chain(self):
