@@ -31,9 +31,10 @@ class ParseError:
 
 
 class ParseResult:
-    def __init__(self, ok, errors):
+    def __init__(self, ok, errors, ast_spans=None):
         self.ok = ok
         self.errors = errors
+        self.ast_spans = ast_spans
 
 
 class Parser:
@@ -43,7 +44,29 @@ class Parser:
         self.errors = []
 
     def parse(self):
+        self._ast_preamble_start = 0
+        self._ast_preamble_end = 0
+        self._ast_body_start = None
+        self._ast_body_end = None
+        self._ast_cond_start = None
+        self._ast_cond_end = None
         self.skip_nl()
+        saw_repeat = False
+        while not self.eof():
+            t = self.peek()
+            if t.code == CODE_REPEAT:
+                self._ast_preamble_end = self.pos
+                saw_repeat = True
+                break
+            pos_before = self.pos
+            self.stmt()
+            self.skip_nl()
+            if self.pos == pos_before and not self.eof():
+                self.advance()
+        if not saw_repeat:
+            self.err_here("Ожидалось ключевое слово repeat")
+            return ParseResult(False, list(self.errors), None)
+
         ok = self.repeat_while()
         self.skip_nl()
         if ok and not self.eof():
@@ -56,7 +79,17 @@ class Parser:
                 t.end_pos,
             )
             self.pos = len(self.tokens)
-        return ParseResult(ok and self.eof(), list(self.errors))
+        spans = None
+        if self._ast_body_start is not None and self._ast_body_end is not None:
+            spans = (
+                self._ast_preamble_start,
+                self._ast_preamble_end,
+                self._ast_body_start,
+                self._ast_body_end,
+                self._ast_cond_start,
+                self._ast_cond_end,
+            )
+        return ParseResult(ok and self.eof(), list(self.errors), spans)
 
     def peek(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
@@ -312,7 +345,9 @@ class Parser:
                 if not self.take(CODE_LBRACE):
                     self.err_here("Ожидался символ '{'")
 
+        self._ast_body_start = self.pos
         self.stmt_list()
+        self._ast_body_end = self.pos
 
         self.skip_nl()
         self.expect(CODE_RBRACE, "Ожидался символ '}'", CODE_WHILE)
@@ -367,7 +402,9 @@ class Parser:
             return False
 
         self.skip_nl()
+        self._ast_cond_start = self.pos
         self.logical_expr()
+        self._ast_cond_end = self.pos
 
         self.skip_nl()
         self.expect(CODE_SEMICOLON, "Ожидался символ ';' в конце конструкции")
@@ -687,4 +724,4 @@ def analyze_syntax(tokens):
     clean = [t for t in filter_tokens_for_parser(tokens) if t.code != err_code]
     result = Parser(clean).parse()
     all_errors = lexer_errors + result.errors
-    return ParseResult(len(all_errors) == 0, all_errors)
+    return ParseResult(len(all_errors) == 0, all_errors, result.ast_spans)

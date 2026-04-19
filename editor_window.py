@@ -30,6 +30,8 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QLabel,
     QComboBox,
+    QRadioButton,
+    QButtonGroup,
     QLineEdit,
     QPushButton,
     QToolButton,
@@ -44,7 +46,8 @@ import re
 
 from regex_search import find_literal_matches, find_matches
 from scanner import Scanner, TOKEN_TYPES
-from parser import analyze_syntax
+from parser import ParseResult
+from semantic_analysis import analyze_program
 
 
 class LineNum(QWidget):
@@ -295,6 +298,9 @@ class EditorWindow(QMainWindow):
         self.parser_table.cellClicked.connect(
             lambda r, c: self.go_to_error_cell(self.parser_table, r, c)
         )
+        self.semantic_table.cellClicked.connect(
+            lambda r, c: self.go_to_error_cell(self.semantic_table, r, c)
+        )
         self.search_table.cellClicked.connect(
             lambda r, c: self.go_to_error_cell(self.search_table, r, c)
         )
@@ -359,10 +365,23 @@ class EditorWindow(QMainWindow):
         if getattr(self, "search_tool_button", None):
             self.search_tool_button.setToolTip(self.tr("search_action"))
 
+        if getattr(self, "semantic_ast_label", None):
+            self.semantic_ast_label.setText(self.tr("semantic_ast_heading"))
+        if getattr(self, "semantic_ast_view_tree_rb", None):
+            self.semantic_ast_view_tree_rb.setText(
+                self.tr("semantic_ast_format_tree")
+            )
+            self.semantic_ast_view_json_rb.setText(
+                self.tr("semantic_ast_format_json")
+            )
+            if hasattr(self, "_semantic_ast_tree_text"):
+                self._refresh_semantic_ast_display()
+
         if getattr(self, "output_tabs", None):
             self.output_tabs.setTabText(0, self.tr("output_tab_lexer"))
             self.output_tabs.setTabText(1, self.tr("output_tab_parser"))
-            self.output_tabs.setTabText(2, self.tr("output_tab_search"))
+            self.output_tabs.setTabText(2, self.tr("output_tab_semantic"))
+            self.output_tabs.setTabText(3, self.tr("output_tab_search"))
 
         self.menuBar().clear()
         self.create_menus()
@@ -421,6 +440,39 @@ class EditorWindow(QMainWindow):
         parser_layout.addWidget(self.parser_summary_label)
         parser_layout.addWidget(self.parser_table)
         self.output_tabs.addTab(parser_tab, "Parser")
+
+        self.semantic_table = QTableWidget()
+        self._configure_results_table(self.semantic_table, 3)
+        self.semantic_ast_header = QWidget()
+        ast_header_row = QHBoxLayout(self.semantic_ast_header)
+        ast_header_row.setContentsMargins(0, 0, 0, 0)
+        self.semantic_ast_label = QLabel()
+        self.semantic_ast_view_tree_rb = QRadioButton()
+        self.semantic_ast_view_json_rb = QRadioButton()
+        self.semantic_ast_view_tree_rb.setChecked(True)
+        self.semantic_ast_view_group = QButtonGroup(self.semantic_ast_header)
+        self.semantic_ast_view_group.setExclusive(True)
+        self.semantic_ast_view_group.addButton(self.semantic_ast_view_tree_rb, 0)
+        self.semantic_ast_view_group.addButton(self.semantic_ast_view_json_rb, 1)
+        self.semantic_ast_view_tree_rb.toggled.connect(self._refresh_semantic_ast_display)
+        self.semantic_ast_view_json_rb.toggled.connect(self._refresh_semantic_ast_display)
+        ast_header_row.addWidget(self.semantic_ast_label)
+        ast_header_row.addWidget(self.semantic_ast_view_tree_rb)
+        ast_header_row.addWidget(self.semantic_ast_view_json_rb)
+        ast_header_row.addStretch(1)
+        self.semantic_ast = QTextEdit()
+        self.semantic_ast.setReadOnly(True)
+        self.semantic_ast.setFont(QFont("Consolas", 10))
+        self.semantic_ast.setMinimumHeight(160)
+        semantic_tab = QWidget()
+        semantic_layout = QVBoxLayout(semantic_tab)
+        semantic_layout.setContentsMargins(4, 4, 4, 4)
+        # AST controls above the table: a stretched QTableWidget can otherwise overlap
+        # the row below it on a short splitter panel, stealing mouse clicks from the combo.
+        semantic_layout.addWidget(self.semantic_ast_header)
+        semantic_layout.addWidget(self.semantic_table, 1)
+        semantic_layout.addWidget(self.semantic_ast, 1)
+        self.output_tabs.addTab(semantic_tab, "Semantic")
 
         self.search_summary_label = QLabel()
         self.search_summary_label.setWordWrap(True)
@@ -844,6 +896,11 @@ class EditorWindow(QMainWindow):
             self.tr("table_err_location"),
             self.tr("table_err_desc"),
         ])
+        self.semantic_table.setHorizontalHeaderLabels([
+            self.tr("table_err_fragment"),
+            self.tr("table_err_location"),
+            self.tr("table_err_desc"),
+        ])
         self.search_table.setHorizontalHeaderLabels([
             self.tr("table_search_fragment"),
             self.tr("table_search_position"),
@@ -915,7 +972,7 @@ class EditorWindow(QMainWindow):
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.search_table.setItem(0, 0, item)
             self.search_table.setSpan(0, 0, 1, 3)
-            self.output_tabs.setCurrentIndex(2)
+            self.output_tabs.setCurrentIndex(3)
             return
 
         if literal:
@@ -949,7 +1006,7 @@ class EditorWindow(QMainWindow):
             self.search_table.setSpan(0, 0, 1, 3)
             self.search_table.resizeColumnsToContents()
             self.search_table.horizontalHeader().setStretchLastSection(True)
-            self.output_tabs.setCurrentIndex(2)
+            self.output_tabs.setCurrentIndex(3)
             return
 
         self.search_table.setRowCount(n)
@@ -970,7 +1027,7 @@ class EditorWindow(QMainWindow):
         self.search_table.resizeColumnsToContents()
         self.search_table.horizontalHeader().setStretchLastSection(True)
         self._apply_editor_search_highlights(matches)
-        self.output_tabs.setCurrentIndex(2)
+        self.output_tabs.setCurrentIndex(3)
 
     def run_analysis(self):
         self._clear_editor_search_highlights()
@@ -981,6 +1038,10 @@ class EditorWindow(QMainWindow):
         self.parser_table.setRowCount(0)
         self.lexer_summary_label.setText("")
         self.parser_summary_label.setText("")
+        self.semantic_ast.clear()
+        self.semantic_ast_label.setText("")
+        self.semantic_table.clearSpans()
+        self.semantic_table.setRowCount(0)
         text = self.editor.toPlainText()
 
         if not text.strip():
@@ -996,6 +1057,19 @@ class EditorWindow(QMainWindow):
             item2.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.parser_table.setItem(0, 0, item2)
             self.parser_table.setSpan(0, 0, 1, 3)
+            self.semantic_table.setColumnCount(3)
+            self.semantic_table.setRowCount(1)
+            item3 = QTableWidgetItem(self.tr("analysis_empty"))
+            item3.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.semantic_table.setItem(0, 0, item3)
+            self.semantic_table.setSpan(0, 0, 1, 3)
+            self.semantic_ast_label.setText(self.tr("semantic_ast_heading"))
+            self._semantic_ast_tree_text = self.tr("semantic_ast_absent") + "\n"
+            self._semantic_ast_json_text = "{}\n"
+            self.semantic_ast_view_group.blockSignals(True)
+            self.semantic_ast_view_tree_rb.setChecked(True)
+            self.semantic_ast_view_group.blockSignals(False)
+            self._refresh_semantic_ast_display()
             self.lexer_summary_label.setText(self.tr("lexer_token_count").format(0))
             self.parser_summary_label.setText(self.tr("analysis_error_count").format(0))
             self.output_tabs.setCurrentIndex(1)
@@ -1003,16 +1077,20 @@ class EditorWindow(QMainWindow):
 
         scanner = Scanner(text)
         tokens = scanner.scan_tokens()
-        result = analyze_syntax(tokens)
+        sem = analyze_program(tokens)
+        result = ParseResult(sem.syntax_ok, sem.syntax_errors)
 
         self._fill_lexer_table(tokens)
         self._fill_parser_table(result)
+        self._fill_semantic_panel(sem)
 
         self.lexer_table.resizeColumnsToContents()
         self.lexer_table.horizontalHeader().setStretchLastSection(True)
         self.parser_table.resizeColumnsToContents()
         self.parser_table.horizontalHeader().setStretchLastSection(True)
-        self.output_tabs.setCurrentIndex(1)
+        self.semantic_table.resizeColumnsToContents()
+        self.semantic_table.horizontalHeader().setStretchLastSection(True)
+        self.output_tabs.setCurrentIndex(2)
 
     def _fill_lexer_table(self, tokens):
         self.lexer_table.clearSpans()
@@ -1073,6 +1151,54 @@ class EditorWindow(QMainWindow):
                 self.parser_table.setItem(i, 1, location)
                 self.parser_table.setItem(i, 2, description)
 
+    def _refresh_semantic_ast_display(self, _index=None):
+        if not hasattr(self, "_semantic_ast_tree_text"):
+            return
+        if self.semantic_ast_view_json_rb.isChecked():
+            mode = "json"
+        else:
+            mode = "tree"
+        if mode == "json":
+            self.semantic_ast.setPlainText(self._semantic_ast_json_text)
+        else:
+            self.semantic_ast.setPlainText(self._semantic_ast_tree_text)
+
+    def _fill_semantic_panel(self, sem):
+        self.semantic_ast_label.setText(self.tr("semantic_ast_heading"))
+        n_sem = len(sem.semantic_errors)
+        self.semantic_table.clearSpans()
+        self.semantic_table.setColumnCount(3)
+        if n_sem == 0:
+            self.semantic_table.setRowCount(1)
+            msg = QTableWidgetItem(self.tr("semantic_no_errors"))
+            msg.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.semantic_table.setItem(0, 0, msg)
+            self.semantic_table.setSpan(0, 0, 1, 3)
+        else:
+            self.semantic_table.setRowCount(n_sem)
+            for i, err in enumerate(sem.semantic_errors):
+                fragment = QTableWidgetItem(err.fragment)
+                location = QTableWidgetItem(
+                    f"{self.tr('status_line')} {err.line}, "
+                    f"{self.tr('err_position')} {err.start_pos}-{err.end_pos}"
+                )
+                description = QTableWidgetItem(err.message)
+                pos_data = (err.line, err.start_pos, err.end_pos)
+                fragment.setData(Qt.ItemDataRole.UserRole, pos_data)
+                err_bg = QColor(255, 0, 0)
+                fragment.setBackground(err_bg)
+                location.setBackground(err_bg)
+                description.setBackground(err_bg)
+                self.semantic_table.setItem(i, 0, fragment)
+                self.semantic_table.setItem(i, 1, location)
+                self.semantic_table.setItem(i, 2, description)
+
+        self._semantic_ast_tree_text = sem.ast_tree_text.rstrip() + "\n"
+        self._semantic_ast_json_text = sem.ast_json_text.rstrip() + "\n"
+        self.semantic_ast_view_group.blockSignals(True)
+        self.semantic_ast_view_tree_rb.setChecked(True)
+        self.semantic_ast_view_group.blockSignals(False)
+        self._refresh_semantic_ast_display()
 
 
 def resource_path(relative_path):
