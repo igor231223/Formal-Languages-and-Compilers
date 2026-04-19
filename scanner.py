@@ -15,6 +15,8 @@ TOKEN_TYPES = {
     "AND": (14, "Логический оператор"),
     "OR": (15, "Логический оператор"),
     "NOT": (16, "Логический оператор"),
+    "LPAREN": (17, "Открывающая скобка"),
+    "RPAREN": (18, "Закрывающая скобка"),
     "ERROR": (100, "Ошибка (недопустимый символ)")
 }
 
@@ -161,6 +163,14 @@ class Scanner:
             end_pos = start_pos + len(lexeme) - 1
             return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
+        if char == '(':
+            code, type_name = TOKEN_TYPES["LPAREN"]
+            return Token(code, type_name, char, self.line, start_pos, start_pos)
+
+        if char == ')':
+            code, type_name = TOKEN_TYPES["RPAREN"]
+            return Token(code, type_name, char, self.line, start_pos, start_pos)
+
         lexeme = char
         while not self.is_at_end() and not self.could_start_token(self.peek()):
             lexeme += self.advance()
@@ -173,7 +183,7 @@ class Scanner:
             return False
         if c in " \n\t":
             return True
-        if c in "{};":
+        if c in "{}();":
             return True
         if c in "<>=":
             return True
