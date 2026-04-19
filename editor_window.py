@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QSplitter,
+    QSizePolicy,
     QPlainTextEdit,
     QFileDialog,
     QMessageBox,
@@ -464,12 +465,33 @@ class EditorWindow(QMainWindow):
         self.semantic_ast.setReadOnly(True)
         self.semantic_ast.setFont(QFont("Consolas", 10))
         self.semantic_ast.setMinimumHeight(160)
+        self.semantic_table.setMinimumHeight(56)
+        self.semantic_table.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred,
+        )
         semantic_tab = QWidget()
         semantic_layout = QVBoxLayout(semantic_tab)
         semantic_layout.setContentsMargins(4, 4, 4, 4)
-        semantic_layout.addWidget(self.semantic_ast_header)
-        semantic_layout.addWidget(self.semantic_table, 1)
-        semantic_layout.addWidget(self.semantic_ast, 1)
+        self._semantic_splitter = QSplitter(Qt.Orientation.Vertical)
+        self._semantic_splitter.setChildrenCollapsible(True)
+        semantic_table_host = QWidget()
+        st_host_lay = QVBoxLayout(semantic_table_host)
+        st_host_lay.setContentsMargins(0, 0, 0, 0)
+        st_host_lay.setSpacing(0)
+        st_host_lay.addWidget(self.semantic_table)
+        semantic_ast_host = QWidget()
+        ast_host_lay = QVBoxLayout(semantic_ast_host)
+        ast_host_lay.setContentsMargins(0, 0, 0, 0)
+        ast_host_lay.setSpacing(4)
+        ast_host_lay.addWidget(self.semantic_ast_header)
+        ast_host_lay.addWidget(self.semantic_ast, 1)
+        self._semantic_splitter.addWidget(semantic_table_host)
+        self._semantic_splitter.addWidget(semantic_ast_host)
+        self._semantic_splitter.setStretchFactor(0, 0)
+        self._semantic_splitter.setStretchFactor(1, 1)
+        self._semantic_splitter.setSizes([130, 340])
+        semantic_layout.addWidget(self._semantic_splitter)
         self.output_tabs.addTab(semantic_tab, "Semantic")
 
         self.search_summary_label = QLabel()
