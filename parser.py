@@ -16,6 +16,8 @@ CODE_ASSIGN = 13
 CODE_AND = 14
 CODE_OR = 15
 CODE_NOT = 16
+CODE_LPAREN = 17
+CODE_RPAREN = 18
 
 
 class ParseError:
@@ -380,7 +382,7 @@ class Parser:
                 return
             if t.code == CODE_LBRACE:
                 self.add_err(
-                    "Лишняя '{' в теле цикла: оператор — это идентификатор и присваивание",
+                    "Лишняя '{' в теле цикла: оператор - это идентификатор и присваивание",
                     t.lexeme,
                     t.line,
                     t.start_pos,
@@ -467,7 +469,7 @@ class Parser:
             return
         if nxt.code == CODE_COMPARE:
             self.add_err(
-                "Ожидался символ ';' в конце оператора (нельзя писать сравнение сразу после выражения)",
+                "Ожидался символ ';' в конце оператора",
                 nxt.lexeme,
                 nxt.line,
                 nxt.start_pos,
@@ -526,70 +528,134 @@ class Parser:
         self.sync_to(CODE_SEMICOLON, CODE_ARITH, CODE_RBRACE, CODE_WHILE)
 
     def logical_expr(self):
+        self.skip_nl()
         self.logical_or_chain()
 
         if self.peek() and self.peek().code == CODE_COMPARE:
             self.err_here("Ожидается логический оператор (and, or) или конец условия перед оператором сравнения")
-            self.sync_to(CODE_SEMICOLON)
+            self.sync_to(CODE_SEMICOLON, CODE_RPAREN)
         elif self.peek() and self.peek().code == CODE_IDENTIFIER:
             self.err_here("Ожидается логический оператор (and, or) перед %s" % self.peek().lexeme)
-            self.sync_to(CODE_SEMICOLON)
+            self.sync_to(CODE_SEMICOLON, CODE_RPAREN)
         elif self.peek() and self.peek().code == CODE_DIGIT:
             self.err_here(
                 "Ожидается логический оператор (and, or) или конец условия «;» перед числом «%s»"
                 % self.peek().lexeme
             )
+            self.sync_to(CODE_SEMICOLON, CODE_RPAREN)
+        elif self.peek() and self.peek().code == CODE_LPAREN:
+            self.err_here(
+                "После части условия нельзя ставить «(» без логического оператора."
+            )
+            self.advance()
+            self.skip_nl()
+            while self.peek() and self.peek().code == CODE_OR:
+                self.advance()
+                self.skip_nl()
+                self.logical_and_chain()
+        elif self.peek() and self.peek().code == CODE_RPAREN:
+            self.err_here("Лишняя закрывающая скобка ')' в условии")
             self.sync_to(CODE_SEMICOLON)
 
     def logical_or_chain(self):
+        self.skip_nl()
         self.logical_and_chain()
         while self.peek() and self.peek().code == CODE_OR:
             self.advance()
+            self.skip_nl()
             self.logical_and_chain()
 
     def logical_and_chain(self):
+        self.skip_nl()
         self.logical_term()
         while self.peek() and self.peek().code == CODE_AND:
             self.advance()
+            self.skip_nl()
             self.logical_term()
 
     def logical_term(self):
         if self.take(CODE_NOT):
-            self.comparison()
+            self.logical_primary()
         else:
-            self.comparison()
+            self.logical_primary()
+
+    def logical_primary(self):
+        t0 = self.peek()
+        if t0 and t0.code == CODE_LPAREN:
+            open_paren = t0
+            self.advance()
+            self.skip_nl()
+            self.logical_or_chain()
+            self.skip_nl()
+            if self.take(CODE_RPAREN):
+                return
+            nxt = self.peek()
+            if nxt and nxt.code == CODE_SEMICOLON:
+                self.add_err(
+                    "Не хватает «)».",
+                    open_paren.lexeme,
+                    open_paren.line,
+                    open_paren.start_pos,
+                    open_paren.end_pos,
+                )
+                return
+            self.expect(
+                CODE_RPAREN,
+                "Ожидалась закрывающая скобка ')'",
+                CODE_SEMICOLON,
+                CODE_RPAREN,
+            )
+            return
+        if self.peek() and self.peek().code == CODE_RPAREN:
+            self.err_here(
+                "Лишняя «)» между частями условия"
+            )
+            while self.peek() and self.peek().code == CODE_RPAREN:
+                self.advance()
+            if self.peek() and self.peek().code == CODE_LPAREN:
+                self.logical_primary()
+                return
+        self.comparison()
 
     def comparison(self):
+        self.skip_nl()
         t = self.peek()
         if t is None:
             self.err_here("Ожидалось условие (идентификатор)")
             return
         if t.code != CODE_IDENTIFIER:
             self.err_here("В условии ожидался идентификатор")
-            self.sync_to(CODE_COMPARE, CODE_SEMICOLON)
+            self.sync_to(CODE_COMPARE, CODE_SEMICOLON, CODE_RPAREN)
             if self.eof():
                 return
         else:
             self.advance()
 
+        self.skip_nl()
         op = self.peek()
         if op is None:
             self.err_here("Ожидался оператор сравнения")
             return
         if op.code != CODE_COMPARE:
             self.err_here("Ожидался оператор сравнения (<, >, ==, ...)")
-            self.sync_to(CODE_AND, CODE_OR, CODE_SEMICOLON)
-            if self.peek() and self.peek().code in (CODE_AND, CODE_OR, CODE_SEMICOLON):
+            self.sync_to(CODE_AND, CODE_OR, CODE_SEMICOLON, CODE_RPAREN)
+            if self.peek() and self.peek().code in (
+                CODE_AND,
+                CODE_OR,
+                CODE_SEMICOLON,
+                CODE_RPAREN,
+            ):
                 return
         else:
             self.advance()
 
+        self.skip_nl()
         val = self.peek()
         if val is None:
             self.err_here("Ожидались идентификатор или целое число в условии")
         elif val.code not in (CODE_IDENTIFIER, CODE_DIGIT):
             self.err_here("Ожидались идентификатор или целое число в условии")
-            self.sync_to(CODE_SEMICOLON)
+            self.sync_to(CODE_SEMICOLON, CODE_RPAREN)
         else:
             self.advance()
 

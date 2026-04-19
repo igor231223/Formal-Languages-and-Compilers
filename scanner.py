@@ -15,6 +15,8 @@ TOKEN_TYPES = {
     "AND": (14, "Логический оператор"),
     "OR": (15, "Логический оператор"),
     "NOT": (16, "Логический оператор"),
+    "LPAREN": (17, "Скобка '('"),
+    "RPAREN": (18, "Скобка ')'"),
     "ERROR": (100, "Ошибка (недопустимый символ)")
 }
 
@@ -76,6 +78,14 @@ class Scanner:
 
         if char == ';':
             code, type_name = TOKEN_TYPES["SEMICOLON"]
+            return Token(code, type_name, char, self.line, start_pos, start_pos)
+
+        if char == '(':
+            code, type_name = TOKEN_TYPES["LPAREN"]
+            return Token(code, type_name, char, self.line, start_pos, start_pos)
+
+        if char == ')':
+            code, type_name = TOKEN_TYPES["RPAREN"]
             return Token(code, type_name, char, self.line, start_pos, start_pos)
 
         if char in ['<', '>']:
@@ -173,7 +183,7 @@ class Scanner:
             return False
         if c in " \n\t":
             return True
-        if c in "{};":
+        if c in "{};()":
             return True
         if c in "<>=":
             return True
