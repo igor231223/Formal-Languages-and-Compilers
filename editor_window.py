@@ -1092,7 +1092,6 @@ class EditorWindow(QMainWindow):
             self._refresh_semantic_ast_display()
             self.lexer_summary_label.setText(self.tr("lexer_token_count").format(0))
             self.parser_summary_label.setText(self.tr("analysis_error_count").format(0))
-            self.output_tabs.setCurrentIndex(1)
             return
 
         scanner = Scanner(text)
@@ -1110,7 +1109,6 @@ class EditorWindow(QMainWindow):
         self.parser_table.horizontalHeader().setStretchLastSection(True)
         self.semantic_table.resizeColumnsToContents()
         self.semantic_table.horizontalHeader().setStretchLastSection(True)
-        self.output_tabs.setCurrentIndex(2)
 
     def _fill_lexer_table(self, tokens):
         self.lexer_table.clearSpans()
