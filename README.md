@@ -1,4 +1,4 @@
-# Formal-Languages-and-Compilers
+<img width="523" height="194" alt="image" src="https://github.com/user-attachments/assets/7830efbb-cb94-433b-8460-6a7c951ed34d" /># Formal-Languages-and-Compilers
 # Лабораторная работа: Специализированный текстовый редактор с поддержкой локализации
 
 ## 1. Название и цель лабораторной работы
@@ -211,29 +211,16 @@ repeat {
 ```
 
 ### 2. Разработка грамматики (полное определение разработанной грамматики):
-| Правило          | Определение |
-|------------------|------------|
-| Program          | "repeat" "{" StatementList "}" "while" Condition ";" |
-| StatementList    | { Statement } |
-| Statement        | Identifier AssignmentOp Expression [ ";" ] |
-| AssignmentOp     | "=" \| CompoundAssign |
-| CompoundAssign   | "+=" \| "-=" \| "*=" \| "/=" |
-| Expression       | Term { ArithOp Term } |
-| Term             | Identifier \| Number |
-| ArithOp          | "+" \| "-" \| "*" \| "/" |
-| Condition        | LogicalOrExpr |
-| LogicalOrExpr    | LogicalAndExpr { "or" LogicalAndExpr } |
-| LogicalAndExpr   | LogicalTerm { "and" LogicalTerm } |
-| LogicalTerm      | [ "not" ] Comparison |
-| Comparison       | Identifier CompareOp Value |
-| CompareOp        | "<" \| ">" \| "<=" \| ">=" \| "==" \| "!=" |
-| Value            | Identifier \| Number |
+<img width="893" height="283" alt="image" src="https://github.com/user-attachments/assets/07c399c5-6be1-43a3-9ae5-6477e7a97b19" />
 
 ### 3. Классификация грамматики (по Хомскому):
-Синтаксис языка, реализованного в parser.py, соответствует контекстно-свободной грамматике.
+Синтаксис языка соответствует контекстно-свободной грамматике.
+<img width="523" height="194" alt="image" src="https://github.com/user-attachments/assets/55201778-4178-4e94-93d9-fc422d60ca2f" />
 
-### 4. Метод анализа (алгоритм синтаксического анализа - граф автоматной грамматики или рекурсивный спуск):
+### 4. Метод анализа (рекурсивный спуск):
 В проекте был реализован рекурсивный спуск в качестве алгоритма синтаксического анализа.
+<img width="797" height="659" alt="image" src="https://github.com/user-attachments/assets/1fca712d-8eea-4645-b2c8-3ff873b8114f" />
+
 
 ### 5.Диагностика и нейтрализация синтаксических ошибок.
 ## Диагностика синтаксических ошибок
