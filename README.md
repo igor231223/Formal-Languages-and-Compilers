@@ -1,4 +1,4 @@
-<img width="523" height="194" alt="image" src="https://github.com/user-attachments/assets/7830efbb-cb94-433b-8460-6a7c951ed34d" /># Formal-Languages-and-Compilers
+# Formal-Languages-and-Compilers
 # Лабораторная работа: Специализированный текстовый редактор с поддержкой локализации
 
 ## 1. Название и цель лабораторной работы
