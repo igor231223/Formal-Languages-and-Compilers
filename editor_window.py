@@ -3,22 +3,11 @@ import sys
 import json
 
 from PyQt6.QtCore import Qt, QSize, QRect, QEvent
-from PyQt6.QtGui import (
-    QFont,
-    QKeySequence,
-    QAction,
-    QIcon,
-    QColor,
-    QPalette,
-    QTextCursor,
-    QTextCharFormat,
-    QPainter,
-)
+from PyQt6.QtGui import QFont, QKeySequence, QAction, QIcon, QColor, QPalette, QTextCursor, QPainter
 from PyQt6.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
     QSplitter,
     QSizePolicy,
     QPlainTextEdit,
@@ -30,25 +19,14 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QAbstractItemView,
     QLabel,
-    QComboBox,
-    QRadioButton,
-    QButtonGroup,
-    QLineEdit,
-    QPushButton,
-    QToolButton,
     QTabWidget,
-    QTextEdit,
     QDialog,
     QTextBrowser,
     QDialogButtonBox,
 )
 
-import re
-
-from regex_search import find_literal_matches, find_matches
 from scanner import Scanner, TOKEN_TYPES
-from parser import ParseResult
-from semantic_analysis import analyze_program
+from parser import analyze_syntax
 
 
 class LineNum(QWidget):
@@ -154,122 +132,6 @@ class NumberedPlainTextEdit(QPlainTextEdit):
             block_number += 1
 
 
-class SearchPopup(QWidget):
-    MODE_PLAIN = 0
-    MODE_REGEX = 1
-
-    REGEX_PRESETS = [
-        ("search_regex_preset_custom", None),
-        (
-            "search_regex_preset_cn_postal",
-            r"^\d{6}$",
-        ),
-        (
-            "search_regex_preset_unionpay",
-            r"^(62|81)\d{14,17}$",
-        ),
-        (
-            "search_regex_preset_hsl",
-            r"^hsl\(\s*(360|3[0-5]\d|[12]?\d{1,2})\s*,\s*(100|[1-9]?\d)%\s*,\s*(100|[1-9]?\d)%\s*\)$",
-        ),
-    ]
-
-    def __init__(self, editor_window: "EditorWindow"):
-        super().__init__(
-            editor_window,
-            Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint,
-        )
-        self._win = editor_window
-        self.setMinimumWidth(380)
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(10, 10, 10, 10)
-        outer.setSpacing(8)
-
-        row_find = QHBoxLayout()
-        self.find_input = QLineEdit()
-        self.find_btn = QPushButton()
-        self.find_btn.setFixedWidth(88)
-        self.find_btn.clicked.connect(self._on_find)
-        self.find_input.returnPressed.connect(self._on_find)
-        row_find.addWidget(self.find_input, 1)
-        row_find.addWidget(self.find_btn)
-        outer.addLayout(row_find)
-
-        self.mode_combo = QComboBox()
-        self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
-        outer.addWidget(self.mode_combo)
-
-        self.regex_extra = QWidget()
-        re_lay = QVBoxLayout(self.regex_extra)
-        re_lay.setContentsMargins(0, 0, 0, 0)
-        self.preset_combo = QComboBox()
-        self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
-        re_lay.addWidget(self.preset_combo)
-        outer.addWidget(self.regex_extra)
-        self.regex_extra.hide()
-
-        self._suppress_preset_signal = False
-        self._build_mode_combo()
-        self._build_preset_combo()
-        self.setObjectName("SearchPopup")
-        self.setStyleSheet(
-            "#SearchPopup { background: palette(base); "
-            "border: 1px solid palette(mid); border-radius: 6px; }"
-        )
-
-    def _build_mode_combo(self):
-        self.mode_combo.blockSignals(True)
-        self.mode_combo.clear()
-        self.mode_combo.addItem("", self.MODE_PLAIN)
-        self.mode_combo.addItem("", self.MODE_REGEX)
-        self.mode_combo.setCurrentIndex(self.MODE_PLAIN)
-        self.mode_combo.blockSignals(False)
-
-    def _build_preset_combo(self):
-        self.preset_combo.blockSignals(True)
-        self.preset_combo.clear()
-        for key, _pat in self.REGEX_PRESETS:
-            self.preset_combo.addItem("", _pat)
-        self.preset_combo.setCurrentIndex(0)
-        self.preset_combo.blockSignals(False)
-
-    def retranslate(self):
-        self.find_btn.setText(self._win.tr("search_find_btn"))
-        self.mode_combo.setItemText(0, self._win.tr("search_mode_plain"))
-        self.mode_combo.setItemText(1, self._win.tr("search_mode_regex"))
-        for i, (key, _pat) in enumerate(self.REGEX_PRESETS):
-            self.preset_combo.setItemText(i, self._win.tr(key))
-
-    def _on_mode_changed(self, _index: int):
-        is_regex = self.mode_combo.currentData() == self.MODE_REGEX
-        self.regex_extra.setVisible(is_regex)
-        self.adjustSize()
-        if is_regex:
-            self._apply_preset_to_field()
-
-    def _on_preset_changed(self, _index: int):
-        if self._suppress_preset_signal:
-            return
-        self._apply_preset_to_field()
-
-    def _apply_preset_to_field(self):
-        if self.mode_combo.currentData() != self.MODE_REGEX:
-            return
-        pat = self.preset_combo.currentData()
-        if pat is None:
-            return
-        self._suppress_preset_signal = True
-        self.find_input.setText(pat)
-        self._suppress_preset_signal = False
-
-    def _on_find(self):
-        text = self.find_input.text()
-        if self.mode_combo.currentData() == self.MODE_PLAIN:
-            self._win.run_search_query(literal=True, query=text)
-        else:
-            self._win.run_search_query(literal=False, query=text)
-
-
 class EditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -278,8 +140,6 @@ class EditorWindow(QMainWindow):
         self.is_dirty = False
         self.current_lang = "ru"
         self.trans = {}
-        self._search_popup = None
-
         self.setMinimumHeight(500)
         self.setMinimumWidth(700)
         self.setWindowIcon(QIcon(resource_path("icons/logo.svg")))
@@ -292,18 +152,11 @@ class EditorWindow(QMainWindow):
         self.load_translation(self.current_lang)
 
         self.editor.textChanged.connect(self.on_text_changed)
-        self.editor.textChanged.connect(self._clear_editor_search_highlights)
         self.lexer_table.cellClicked.connect(
             lambda r, c: self.go_to_error_cell(self.lexer_table, r, c)
         )
         self.parser_table.cellClicked.connect(
             lambda r, c: self.go_to_error_cell(self.parser_table, r, c)
-        )
-        self.semantic_table.cellClicked.connect(
-            lambda r, c: self.go_to_error_cell(self.semantic_table, r, c)
-        )
-        self.search_table.cellClicked.connect(
-            lambda r, c: self.go_to_error_cell(self.search_table, r, c)
         )
         
         self.editor.cursorPositionChanged.connect(self.update_cursor_status)
@@ -362,27 +215,9 @@ class EditorWindow(QMainWindow):
         self.tb_open.setToolTip(self.tr("file_open"))
         self.tb_new.setToolTip(self.tr("file_new"))
         self.tb_run.setToolTip(self.tr("run"))
-        self.menu_search.setText(self.tr("search_action"))
-        if getattr(self, "search_tool_button", None):
-            self.search_tool_button.setToolTip(self.tr("search_action"))
-
-        if getattr(self, "semantic_ast_label", None):
-            self.semantic_ast_label.setText(self.tr("semantic_ast_heading"))
-        if getattr(self, "semantic_ast_view_tree_rb", None):
-            self.semantic_ast_view_tree_rb.setText(
-                self.tr("semantic_ast_format_tree")
-            )
-            self.semantic_ast_view_json_rb.setText(
-                self.tr("semantic_ast_format_json")
-            )
-            if hasattr(self, "_semantic_ast_tree_text"):
-                self._refresh_semantic_ast_display()
-
         if getattr(self, "output_tabs", None):
             self.output_tabs.setTabText(0, self.tr("output_tab_lexer"))
             self.output_tabs.setTabText(1, self.tr("output_tab_parser"))
-            self.output_tabs.setTabText(2, self.tr("output_tab_semantic"))
-            self.output_tabs.setTabText(3, self.tr("output_tab_search"))
 
         self.menuBar().clear()
         self.create_menus()
@@ -392,9 +227,6 @@ class EditorWindow(QMainWindow):
         self.create_toolbar()
 
         self._refresh_output_tabs_headers()
-
-        if self._search_popup is not None:
-            self._search_popup.retranslate()
 
         self.update_cursor_status()
 
@@ -442,69 +274,6 @@ class EditorWindow(QMainWindow):
         parser_layout.addWidget(self.parser_table)
         self.output_tabs.addTab(parser_tab, "Parser")
 
-        self.semantic_table = QTableWidget()
-        self._configure_results_table(self.semantic_table, 3)
-        self.semantic_ast_header = QWidget()
-        ast_header_row = QHBoxLayout(self.semantic_ast_header)
-        ast_header_row.setContentsMargins(0, 0, 0, 0)
-        self.semantic_ast_label = QLabel()
-        self.semantic_ast_view_tree_rb = QRadioButton()
-        self.semantic_ast_view_json_rb = QRadioButton()
-        self.semantic_ast_view_tree_rb.setChecked(True)
-        self.semantic_ast_view_group = QButtonGroup(self.semantic_ast_header)
-        self.semantic_ast_view_group.setExclusive(True)
-        self.semantic_ast_view_group.addButton(self.semantic_ast_view_tree_rb, 0)
-        self.semantic_ast_view_group.addButton(self.semantic_ast_view_json_rb, 1)
-        self.semantic_ast_view_tree_rb.toggled.connect(self._refresh_semantic_ast_display)
-        self.semantic_ast_view_json_rb.toggled.connect(self._refresh_semantic_ast_display)
-        ast_header_row.addWidget(self.semantic_ast_label)
-        ast_header_row.addWidget(self.semantic_ast_view_tree_rb)
-        ast_header_row.addWidget(self.semantic_ast_view_json_rb)
-        ast_header_row.addStretch(1)
-        self.semantic_ast = QTextEdit()
-        self.semantic_ast.setReadOnly(True)
-        self.semantic_ast.setFont(QFont("Consolas", 10))
-        self.semantic_ast.setMinimumHeight(160)
-        self.semantic_table.setMinimumHeight(56)
-        self.semantic_table.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Preferred,
-        )
-        semantic_tab = QWidget()
-        semantic_layout = QVBoxLayout(semantic_tab)
-        semantic_layout.setContentsMargins(4, 4, 4, 4)
-        self._semantic_splitter = QSplitter(Qt.Orientation.Vertical)
-        self._semantic_splitter.setChildrenCollapsible(True)
-        semantic_table_host = QWidget()
-        st_host_lay = QVBoxLayout(semantic_table_host)
-        st_host_lay.setContentsMargins(0, 0, 0, 0)
-        st_host_lay.setSpacing(0)
-        st_host_lay.addWidget(self.semantic_table)
-        semantic_ast_host = QWidget()
-        ast_host_lay = QVBoxLayout(semantic_ast_host)
-        ast_host_lay.setContentsMargins(0, 0, 0, 0)
-        ast_host_lay.setSpacing(4)
-        ast_host_lay.addWidget(self.semantic_ast_header)
-        ast_host_lay.addWidget(self.semantic_ast, 1)
-        self._semantic_splitter.addWidget(semantic_table_host)
-        self._semantic_splitter.addWidget(semantic_ast_host)
-        self._semantic_splitter.setStretchFactor(0, 0)
-        self._semantic_splitter.setStretchFactor(1, 1)
-        self._semantic_splitter.setSizes([130, 340])
-        semantic_layout.addWidget(self._semantic_splitter)
-        self.output_tabs.addTab(semantic_tab, "Semantic")
-
-        self.search_summary_label = QLabel()
-        self.search_summary_label.setWordWrap(True)
-        self.search_table = QTableWidget()
-        self._configure_results_table(self.search_table, 3)
-        search_tab = QWidget()
-        search_layout = QVBoxLayout(search_tab)
-        search_layout.setContentsMargins(4, 4, 4, 4)
-        search_layout.addWidget(self.search_summary_label)
-        search_layout.addWidget(self.search_table)
-        self.output_tabs.addTab(search_tab, "Search")
-
         self.output_panel = QWidget()
         output_layout = QVBoxLayout(self.output_panel)
         output_layout.setContentsMargins(0, 0, 0, 0)
@@ -520,43 +289,6 @@ class EditorWindow(QMainWindow):
         table.verticalHeader().setVisible(False)
         table.horizontalHeader().setStretchLastSection(True)
         table.setFont(QFont("Consolas", 11))
-
-    def _clear_editor_search_highlights(self):
-        self.editor.setExtraSelections([])
-
-    def _apply_editor_search_highlights(self, matches):
-        if not matches:
-            self._clear_editor_search_highlights()
-            return
-        doc = self.editor.document()
-        fmt = QTextCharFormat()
-        fmt.setBackground(QColor(180, 180, 180))
-        selections = []
-        for m in matches:
-            cur = QTextCursor(doc)
-            cur.setPosition(m.abs_start)
-            cur.setPosition(m.abs_end, QTextCursor.MoveMode.KeepAnchor)
-            extra = QTextEdit.ExtraSelection()
-            extra.cursor = cur
-            extra.format = fmt
-            selections.append(extra)
-        self.editor.setExtraSelections(selections)
-
-    def _position_search_popup(self, popup: "SearchPopup") -> None:
-        popup.adjustSize()
-        pw = popup.width()
-        ph = popup.height()
-        fg = self.frameGeometry()
-        margin = 8
-        x = fg.right() - pw - margin
-        tb = getattr(self, "_main_toolbar", None)
-        if tb is not None:
-            y = tb.mapToGlobal(tb.rect().bottomLeft()).y() + 2
-        else:
-            y = fg.top() + margin
-        x = max(fg.left() + margin, min(x, fg.right() - pw - margin))
-        y = max(fg.top() + margin, min(y, fg.bottom() - ph - margin))
-        popup.move(x, y)
 
     def create_actions(self):
         self.menu_new = QAction(self)
@@ -606,10 +338,6 @@ class EditorWindow(QMainWindow):
         self.menu_run = QAction(self)
         self.menu_run.setShortcut(QKeySequence("F5"))
         self.menu_run.triggered.connect(self.run_analysis)
-
-        self.menu_search = QAction(self)
-        self.menu_search.setShortcut(QKeySequence("Ctrl+F"))
-        self.menu_search.triggered.connect(self.open_search_popup)
 
         self.lang_ru_act = QAction(self)
         self.lang_ru_act.setCheckable(True)
@@ -691,8 +419,6 @@ class EditorWindow(QMainWindow):
         edit_menu.addAction(self.menu_paste)
         edit_menu.addSeparator()
         edit_menu.addAction(self.menu_select_all)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self.menu_search)
 
         run_menu = mb.addMenu(self.tr("run"))
         run_menu.addAction(self.menu_run)
@@ -729,17 +455,6 @@ class EditorWindow(QMainWindow):
         tb.addAction(self.tb_copy)
         tb.addAction(self.tb_paste)
         tb.addSeparator()
-
-        self.search_tool_button = QToolButton(tb)
-        self.search_tool_button.setIcon(QIcon(resource_path("icons/search.svg")))
-        self.search_tool_button.setIconSize(QSize(32, 32))
-        self.search_tool_button.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonIconOnly
-        )
-        self.search_tool_button.setToolTip(self.tr("search_action"))
-        self.search_tool_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.search_tool_button.clicked.connect(self.open_search_popup)
-        tb.addWidget(self.search_tool_button)
 
         tb.addAction(self.tb_help)
         tb.addAction(self.tb_about)
@@ -916,16 +631,6 @@ class EditorWindow(QMainWindow):
             self.tr("table_err_location"),
             self.tr("table_err_desc"),
         ])
-        self.semantic_table.setHorizontalHeaderLabels([
-            self.tr("table_err_fragment"),
-            self.tr("table_err_location"),
-            self.tr("table_err_desc"),
-        ])
-        self.search_table.setHorizontalHeaderLabels([
-            self.tr("table_search_fragment"),
-            self.tr("table_search_position"),
-            self.tr("table_search_length"),
-        ])
 
     def go_to_error_cell(self, table, row, column):
         item0 = table.item(row, 0)
@@ -967,90 +672,7 @@ class EditorWindow(QMainWindow):
         self.editor.setTextCursor(cursor)
         self.editor.setFocus()
 
-    def open_search_popup(self):
-        if self._search_popup is None:
-            self._search_popup = SearchPopup(self)
-        self._search_popup.retranslate()
-        self._position_search_popup(self._search_popup)
-        self._search_popup.show()
-        self._search_popup.raise_()
-        self._search_popup.activateWindow()
-        self._search_popup.find_input.setFocus()
-
-    def run_search_query(self, *, literal: bool, query: str):
-        self._refresh_output_tabs_headers()
-        self.search_table.clearSpans()
-        self.search_table.setRowCount(0)
-        self._clear_editor_search_highlights()
-
-        text = self.editor.toPlainText()
-        if not text.strip():
-            self.search_summary_label.setText(self.tr("search_count").format(0))
-            self.search_table.setColumnCount(3)
-            self.search_table.setRowCount(1)
-            item = QTableWidgetItem(self.tr("search_empty_text"))
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.search_table.setItem(0, 0, item)
-            self.search_table.setSpan(0, 0, 1, 3)
-            self.output_tabs.setCurrentIndex(3)
-            return
-
-        if literal:
-            matches = find_literal_matches(text, query)
-        else:
-            if not query.strip():
-                QMessageBox.warning(
-                    self,
-                    self.tr("error_title"),
-                    self.tr("search_regex_empty"),
-                )
-                return
-            try:
-                re.compile(query)
-            except re.error as e:
-                QMessageBox.warning(
-                    self, self.tr("error_title"), self.tr("search_regex_error").format(e)
-                )
-                return
-            matches = find_matches(text, query, re.MULTILINE)
-
-        n = len(matches)
-        self.search_summary_label.setText(self.tr("search_count").format(n))
-        self.search_table.setColumnCount(3)
-
-        if n == 0:
-            self.search_table.setRowCount(1)
-            item = QTableWidgetItem(self.tr("search_no_matches"))
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.search_table.setItem(0, 0, item)
-            self.search_table.setSpan(0, 0, 1, 3)
-            self.search_table.resizeColumnsToContents()
-            self.search_table.horizontalHeader().setStretchLastSection(True)
-            self.output_tabs.setCurrentIndex(3)
-            return
-
-        self.search_table.setRowCount(n)
-        for i, m in enumerate(matches):
-            fragment = QTableWidgetItem(m.fragment)
-            location = QTableWidgetItem(
-                f"{self.tr('status_line')} {m.line}, "
-                f"{self.tr('status_column')} {m.column}"
-            )
-            length_item = QTableWidgetItem(str(m.length))
-            pos_data = {"type": "abs", "start": m.abs_start, "end": m.abs_end}
-            fragment.setData(Qt.ItemDataRole.UserRole, pos_data)
-
-            self.search_table.setItem(i, 0, fragment)
-            self.search_table.setItem(i, 1, location)
-            self.search_table.setItem(i, 2, length_item)
-
-        self.search_table.resizeColumnsToContents()
-        self.search_table.horizontalHeader().setStretchLastSection(True)
-        self._apply_editor_search_highlights(matches)
-        self.output_tabs.setCurrentIndex(3)
-
     def run_analysis(self):
-        self._clear_editor_search_highlights()
         self._refresh_output_tabs_headers()
         self.lexer_table.clearSpans()
         self.lexer_table.setRowCount(0)
@@ -1058,10 +680,6 @@ class EditorWindow(QMainWindow):
         self.parser_table.setRowCount(0)
         self.lexer_summary_label.setText("")
         self.parser_summary_label.setText("")
-        self.semantic_ast.clear()
-        self.semantic_ast_label.setText("")
-        self.semantic_table.clearSpans()
-        self.semantic_table.setRowCount(0)
         text = self.editor.toPlainText()
 
         if not text.strip():
@@ -1077,38 +695,21 @@ class EditorWindow(QMainWindow):
             item2.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.parser_table.setItem(0, 0, item2)
             self.parser_table.setSpan(0, 0, 1, 3)
-            self.semantic_table.setColumnCount(3)
-            self.semantic_table.setRowCount(1)
-            item3 = QTableWidgetItem(self.tr("analysis_empty"))
-            item3.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.semantic_table.setItem(0, 0, item3)
-            self.semantic_table.setSpan(0, 0, 1, 3)
-            self.semantic_ast_label.setText(self.tr("semantic_ast_heading"))
-            self._semantic_ast_tree_text = self.tr("semantic_ast_absent") + "\n"
-            self._semantic_ast_json_text = "{}\n"
-            self.semantic_ast_view_group.blockSignals(True)
-            self.semantic_ast_view_tree_rb.setChecked(True)
-            self.semantic_ast_view_group.blockSignals(False)
-            self._refresh_semantic_ast_display()
             self.lexer_summary_label.setText(self.tr("lexer_token_count").format(0))
             self.parser_summary_label.setText(self.tr("analysis_error_count").format(0))
             return
 
         scanner = Scanner(text)
         tokens = scanner.scan_tokens()
-        sem = analyze_program(tokens)
-        result = ParseResult(sem.syntax_ok, sem.syntax_errors)
+        result = analyze_syntax(tokens)
 
         self._fill_lexer_table(tokens)
         self._fill_parser_table(result)
-        self._fill_semantic_panel(sem)
 
         self.lexer_table.resizeColumnsToContents()
         self.lexer_table.horizontalHeader().setStretchLastSection(True)
         self.parser_table.resizeColumnsToContents()
         self.parser_table.horizontalHeader().setStretchLastSection(True)
-        self.semantic_table.resizeColumnsToContents()
-        self.semantic_table.horizontalHeader().setStretchLastSection(True)
 
     def _fill_lexer_table(self, tokens):
         self.lexer_table.clearSpans()
@@ -1168,56 +769,6 @@ class EditorWindow(QMainWindow):
                 self.parser_table.setItem(i, 0, fragment)
                 self.parser_table.setItem(i, 1, location)
                 self.parser_table.setItem(i, 2, description)
-
-    def _refresh_semantic_ast_display(self, _index=None):
-        if not hasattr(self, "_semantic_ast_tree_text"):
-            return
-        if self.semantic_ast_view_json_rb.isChecked():
-            mode = "json"
-        else:
-            mode = "tree"
-        if mode == "json":
-            self.semantic_ast.setPlainText(self._semantic_ast_json_text)
-        else:
-            self.semantic_ast.setPlainText(self._semantic_ast_tree_text)
-
-    def _fill_semantic_panel(self, sem):
-        self.semantic_ast_label.setText(self.tr("semantic_ast_heading"))
-        n_sem = len(sem.semantic_errors)
-        self.semantic_table.clearSpans()
-        self.semantic_table.setColumnCount(3)
-        if n_sem == 0:
-            self.semantic_table.setRowCount(1)
-            msg = QTableWidgetItem(self.tr("semantic_no_errors"))
-            msg.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.semantic_table.setItem(0, 0, msg)
-            self.semantic_table.setSpan(0, 0, 1, 3)
-        else:
-            self.semantic_table.setRowCount(n_sem)
-            for i, err in enumerate(sem.semantic_errors):
-                fragment = QTableWidgetItem(err.fragment)
-                location = QTableWidgetItem(
-                    f"{self.tr('status_line')} {err.line}, "
-                    f"{self.tr('err_position')} {err.start_pos}-{err.end_pos}"
-                )
-                description = QTableWidgetItem(err.message)
-                pos_data = (err.line, err.start_pos, err.end_pos)
-                fragment.setData(Qt.ItemDataRole.UserRole, pos_data)
-                err_bg = QColor(255, 0, 0)
-                fragment.setBackground(err_bg)
-                location.setBackground(err_bg)
-                description.setBackground(err_bg)
-                self.semantic_table.setItem(i, 0, fragment)
-                self.semantic_table.setItem(i, 1, location)
-                self.semantic_table.setItem(i, 2, description)
-
-        self._semantic_ast_tree_text = sem.ast_tree_text.rstrip() + "\n"
-        self._semantic_ast_json_text = sem.ast_json_text.rstrip() + "\n"
-        self.semantic_ast_view_group.blockSignals(True)
-        self.semantic_ast_view_tree_rb.setChecked(True)
-        self.semantic_ast_view_group.blockSignals(False)
-        self._refresh_semantic_ast_display()
-
 
 def resource_path(relative_path):
     try:
