@@ -211,7 +211,7 @@ repeat {
 ```
 
 ### 2. Разработка грамматики (полное определение разработанной грамматики):
-<img width="893" height="283" alt="image" src="https://github.com/user-attachments/assets/07c399c5-6be1-43a3-9ae5-6477e7a97b19" />
+<img width="943" height="296" alt="image" src="https://github.com/user-attachments/assets/649707fc-cd5d-4ef1-a8b5-cd8ec21a9540" />
 
 ### 3. Классификация грамматики (по Хомскому):
 Синтаксис языка соответствует контекстно-свободной грамматике.
