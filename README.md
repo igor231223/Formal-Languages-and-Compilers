@@ -433,9 +433,11 @@ III Блок.
 
 ---
 
-Граф автомата
+## Дополнительное задание - граф автомата
 
 <img width="1176" height="360" alt="image" src="https://github.com/user-attachments/assets/b0672b57-0d0a-4d93-81f3-a54c74d49d21" />
+
+<img width="441" height="273" alt="image" src="https://github.com/user-attachments/assets/aedc0ea9-7672-4f99-84c9-4c40e2864667" />
 
 
 ---
