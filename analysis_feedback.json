@@ -1,0 +1,2715 @@
+{
+  "repeat {\n\tnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": []
+  },
+  "repeat {\n\tnumber += 1\n} while numb@er < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 15,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "numb@er"
+      }
+    ]
+  },
+  "re@peat {\n\tnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидалось ключевое слово repeat (лексическая ошибка)",
+        "fragment": "re@peat"
+      }
+    ]
+  },
+  "re@peat {\n\tnumber += 1\n} whi@le number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидалось ключевое слово repeat (лексическая ошибка)",
+        "fragment": "re@peat"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while (лексическая ошибка)",
+        "fragment": "whi@le"
+      }
+    ]
+  },
+  "repeat {\n\tnumber +== 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 9,
+        "end": 11,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "+=="
+      }
+    ]
+  },
+  "repeat {\n\tnumber += 1\n} while number < 5": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "parser",
+        "line": 3,
+        "start": 18,
+        "end": 18,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": ""
+      }
+    ]
+  },
+  "repeat {": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Ожидался символ '}'",
+        "fragment": ""
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": ""
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\nnumber < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 11,
+        "end": 11,
+        "message": "Ожидался символ '}'",
+        "fragment": ""
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 11,
+        "end": 11,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": ""
+      }
+    ]
+  },
+  "repete {\nnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 6,
+        "message": "Ожидалось ключевое слово repeat",
+        "fragment": "repete"
+      }
+    ]
+  },
+  "repeat\nnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 1,
+        "end": 6,
+        "message": "Ожидался символ '{'",
+        "fragment": "number"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\nwhile ;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидался символ '}'",
+        "fragment": "while"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 7,
+        "end": 7,
+        "message": "В условии ожидался идентификатор",
+        "fragment": ";"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 7,
+        "end": 7,
+        "message": "Ожидался оператор сравнения (<, >, ==, ...)",
+        "fragment": ";"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 7,
+        "end": 7,
+        "message": "Ожидались идентификатор или целое число в условии",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n}; while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 2,
+        "end": 2,
+        "message": "Лишний символ ';' в данной позиции",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 { };": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Символ '{' в условии не на своем месте",
+        "fragment": "{"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 22,
+        "message": "Символ '}' в условии не на своем месте",
+        "fragment": "}"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while ( );": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 11,
+        "end": 11,
+        "message": "В условии ожидался идентификатор",
+        "fragment": ")"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 11,
+        "end": 11,
+        "message": "Ожидался оператор сравнения (<, >, ==, ...)",
+        "fragment": ")"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 12,
+        "end": 12,
+        "message": "Ожидались идентификатор или целое число в условии",
+        "fragment": ";"
+      }
+    ]
+  },
+  "while number < 5\nnumber += 1\n} repeat;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидалось ключевое слово repeat",
+        "fragment": "while"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": ""
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 18,
+        "end": 18,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": ""
+      }
+    ]
+  },
+  "repeat (\nnumber += 1\n) while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Ожидался символ '{' после repeat",
+        "fragment": "("
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 1,
+        "message": "Ожидался символ '}' перед while",
+        "fragment": ")"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\nwhile number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидался символ '}'",
+        "fragment": "while"
+      }
+    ]
+  },
+  "{\nnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 1,
+        "message": "Ожидалось ключевое слово repeat",
+        "fragment": "{"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\nwhile number < 5": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидался символ '}'",
+        "fragment": "while"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 16,
+        "end": 16,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": ""
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} repeat number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": "repeat"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 13,
+        "message": "Лишнее ключевое слово while в условии",
+        "fragment": "while"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} if number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 4,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": "if"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "<"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < ;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 18,
+        "end": 18,
+        "message": "Ожидались идентификатор или целое число в условии",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ;;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 21,
+        "end": 21,
+        "message": "Лишние символы после завершения конструкции",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while (number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "Не хватает «)».",
+        "fragment": "("
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 );": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Лишняя закрывающая скобка ')' в условии",
+        "fragment": ")"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 {": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "{"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while { number < 5 };": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "Символ '{' в условии не на своем месте",
+        "fragment": "{"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 22,
+        "message": "Символ '}' в условии не на своем месте",
+        "fragment": "}"
+      }
+    ]
+  },
+  "repeat [\nnumber += 1\n] while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Ожидался символ '{' после repeat",
+        "fragment": "["
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 1,
+        "message": "Ожидался символ '}' перед while",
+        "fragment": "]"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} do while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 4,
+        "message": "Лишнее ключевое слово do перед while",
+        "fragment": "do"
+      }
+    ]
+  },
+  "repeat\n{\nwhile number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидался идентификатор (начало оператора присваивания)",
+        "fragment": "while"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "while"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидалось значение выражения (идентификатор или число)",
+        "fragment": "while"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидался символ '}'",
+        "fragment": "while"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while (number < 5;);": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Лишний символ ';' в условии: перед ')' здесь не нужен ';'",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while (number < 5)": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": ""
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 .": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';', найдено '.' (лексическая ошибка)",
+        "fragment": "."
+      }
+    ]
+  },
+  "rep{eat {\n\tnu==mber += 1\n} while nu<mber < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидалось ключевое слово repeat (лексическая ошибка)",
+        "fragment": "rep{eat"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 2,
+        "end": 9,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "nu==mber"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 15,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "nu<mber"
+      }
+    ]
+  },
+  "repeat {{{\n\tnumber +=== 1\n} while number < 1;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 10,
+        "message": "Ожидался символ '{'. Получена последовательность '{{{'.",
+        "fragment": "{{{"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 9,
+        "end": 12,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "+==="
+      }
+    ]
+  },
+  "repeat {{{\n\tnumber +=== 1\n} while <<< 1;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 10,
+        "message": "Ожидался символ '{'. Получена последовательность '{{{'.",
+        "fragment": "{{{"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 9,
+        "end": 12,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "+==="
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 11,
+        "message": "Ожидался оператор сравнения (<, >, ==, ...)",
+        "fragment": "<<<"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 13,
+        "end": 13,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "1"
+      }
+    ]
+  },
+  "repeat {\n\tnumber += 1\n} while number < 5;;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 19,
+        "end": 20,
+        "message": "Ожидался символ ';'. Получена последовательность ';;'.",
+        "fragment": ";;"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\nwhile (number < 5);": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 5,
+        "message": "Ожидался символ '}'",
+        "fragment": "while"
+      }
+    ]
+  },
+  "repetir {\nnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидалось ключевое слово repeat",
+        "fragment": "repetir"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number = 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 16,
+        "end": 16,
+        "message": "Ожидался оператор сравнения (<, >, ==, ...)",
+        "fragment": "="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 +;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "+"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while * 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "*"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 repeat;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 25,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "repeat"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while (number < 5) { }": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 22,
+        "message": "Символ '{' в условии не на своем месте",
+        "fragment": "{"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 24,
+        "message": "Символ '}' в условии не на своем месте",
+        "fragment": "}"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ( );": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "После части условия нельзя ставить «(» без логического оператора.",
+        "fragment": "("
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": ")"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while 5 < number < 10;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "5"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидается логический оператор (and, or) или конец условия перед оператором сравнения",
+        "fragment": "<"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while (number < 5 && );": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 21,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '&&' (лексическая ошибка)",
+        "fragment": "&&"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while ( || number < 5);": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 11,
+        "end": 12,
+        "message": "Ожидался символ ';', найдено '||' (лексическая ошибка)",
+        "fragment": "||"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 :": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';', найдено ':' (лексическая ошибка)",
+        "fragment": ":"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ; ;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 22,
+        "message": "Лишние символы после завершения конструкции",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while ( ( number < 5 );": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "Не хватает «)».",
+        "fragment": "("
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ) ) ;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Лишняя закрывающая скобка ')' в условии",
+        "fragment": ")"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while ! ;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 9,
+        "message": "Ожидался оператор сравнения (<, >, ==, ...)",
+        "fragment": "!"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 11,
+        "end": 11,
+        "message": "В условии ожидался идентификатор",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < ; 5": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 18,
+        "end": 18,
+        "message": "Ожидались идентификатор или целое число в условии",
+        "fragment": ";"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Лишние символы после завершения конструкции",
+        "fragment": "5"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} during number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": "during"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ?": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';', найдено '?' (лексическая ошибка)",
+        "fragment": "?"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 $": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';', найдено '$' (лексическая ошибка)",
+        "fragment": "$"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 #": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';', найдено '#' (лексическая ошибка)",
+        "fragment": "#"
+      }
+    ]
+  },
+  "repea!t {\nnum@ber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидалось ключевое слово repeat (лексическая ошибка)",
+        "fragment": "repea!t"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "num@ber"
+      }
+    ]
+  },
+  "repeat {\nnumber +#= 1\n} while number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 8,
+        "end": 8,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "+"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 9,
+        "end": 9,
+        "message": "Ожидался символ ';', найдено '#' (лексическая ошибка)",
+        "fragment": "#"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} whi#le number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while (лексическая ошибка)",
+        "fragment": "whi#le"
+      }
+    ]
+  },
+  "rep$eat {\nnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидалось ключевое слово repeat (лексическая ошибка)",
+        "fragment": "rep$eat"
+      }
+    ]
+  },
+  "repeat {\nnum%ber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "num%ber"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while num^ber < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 15,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "num^ber"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} wh&ile number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while (лексическая ошибка)",
+        "fragment": "wh&ile"
+      }
+    ]
+  },
+  "repeat {\nnumber +*= 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 8,
+        "end": 10,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "+*="
+      }
+    ]
+  },
+  "re-peat {\nnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 7,
+        "message": "Ожидалось ключевое слово repeat (лексическая ошибка)",
+        "fragment": "re-peat"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5;;;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Лишние символы после завершения конструкции",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber +=!!! 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 8,
+        "end": 12,
+        "message": "Ожидался оператор сравнения (<, >, ==, ...)",
+        "fragment": "+=!!!"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} whil?e number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while (лексическая ошибка)",
+        "fragment": "whil?e"
+      }
+    ]
+  },
+  "r.e.p.e.a.t {\nnumber += 1\n} while number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 3,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "r.e"
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 4,
+        "end": 4,
+        "message": "Ожидался символ ';', найдено '.' (лексическая ошибка)",
+        "fragment": "."
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 5,
+        "end": 7,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "p.e"
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Ожидался символ ';', найдено '.' (лексическая ошибка)",
+        "fragment": "."
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 9,
+        "end": 11,
+        "message": "Ожидался логический оператор (лексическая ошибка)",
+        "fragment": "a.t"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number <<<< 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 16,
+        "end": 19,
+        "message": "Ожидался оператор сравнения (<, >, ==, ...)",
+        "fragment": "<<<<"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 @#$;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '@#$' (лексическая ошибка)",
+        "fragment": "@#$"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} whil_e number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 8,
+        "message": "Ожидалось ключевое слово while (лексическая ошибка)",
+        "fragment": "whil_e"
+      }
+    ]
+  },
+  "repeat {\nnumb er += 1\n} while number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 6,
+        "end": 7,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "er"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} wh ile number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 4,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": "wh"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 andd;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидается логический оператор (and, or) перед andd",
+        "fragment": "andd"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 orr;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидается логический оператор (and, or) перед orr",
+        "fragment": "orr"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 &&;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидался символ ';', найдено '&&' (лексическая ошибка)",
+        "fragment": "&&"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ||;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидался символ ';', найдено '||' (лексическая ошибка)",
+        "fragment": "||"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 !;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "!"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ==;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидается логический оператор (and, or) или конец условия перед оператором сравнения",
+        "fragment": "=="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 !=;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидается логический оператор (and, or) или конец условия перед оператором сравнения",
+        "fragment": "!="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 >;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидается логический оператор (and, or) или конец условия перед оператором сравнения",
+        "fragment": ">"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 <;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 20,
+        "message": "Ожидается логический оператор (and, or) или конец условия перед оператором сравнения",
+        "fragment": "<"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 >=;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидается логический оператор (and, or) или конец условия перед оператором сравнения",
+        "fragment": ">="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 <=;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидается логический оператор (and, or) или конец условия перед оператором сравнения",
+        "fragment": "<="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 23,
+        "message": "В условии ожидался идентификатор",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 22,
+        "message": "В условии ожидался идентификатор",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 26,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 24,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or and and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and and and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 26,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 24,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and or and or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or and or and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and or or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or and and and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and and and and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 26,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or or or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 24,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and or or or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or and and and and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and and and and and;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 26,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "and"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 or or or or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 23,
+        "end": 24,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 and or or or or or;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 24,
+        "end": 25,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "or"
+      }
+    ]
+  },
+  "r3p3at {\nnum8er += 1\n} wh1le number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 6,
+        "message": "Ожидалось ключевое слово repeat",
+        "fragment": "r3p3at"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 7,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": "wh1le"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while n_u_m_b_e_r < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 9,
+        "end": 11,
+        "message": "Ожидался логический оператор (лексическая ошибка)",
+        "fragment": "n_u"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 12,
+        "end": 12,
+        "message": "Ожидался символ ';', найдено '_' (лексическая ошибка)",
+        "fragment": "_"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 13,
+        "end": 15,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "m_b"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 16,
+        "end": 16,
+        "message": "Ожидался символ ';', найдено '_' (лексическая ошибка)",
+        "fragment": "_"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 17,
+        "end": 19,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "e_r"
+      }
+    ]
+  },
+  "rep...eat {\nnum,,,ber += 1\n} whi---le number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 1,
+        "end": 4,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "rep."
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 5,
+        "end": 6,
+        "message": "Ожидался символ ';', найдено '..' (лексическая ошибка)",
+        "fragment": ".."
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 1,
+        "end": 4,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "num,"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 5,
+        "end": 6,
+        "message": "Ожидался символ ';', найдено ',,' (лексическая ошибка)",
+        "fragment": ",,"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 3,
+        "end": 10,
+        "message": "Ожидался идентификатор (лексическая ошибка)",
+        "fragment": "whi---le"
+      }
+    ]
+  },
+  "repeat {\nnumber +++= 1\n} while number === 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 8,
+        "end": 11,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "+++="
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 16,
+        "end": 18,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "==="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 !!!;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "!!!"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ???;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '???' (лексическая ошибка)",
+        "fragment": "???"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 :::;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено ':::' (лексическая ошибка)",
+        "fragment": ":::"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ;;;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 21,
+        "end": 21,
+        "message": "Лишние символы после завершения конструкции",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ,,,": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено ',,,' (лексическая ошибка)",
+        "fragment": ",,,"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ...": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '...' (лексическая ошибка)",
+        "fragment": "..."
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ---": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "---"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "---"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ___": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '___' (лексическая ошибка)",
+        "fragment": "___"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 +++": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "+++"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "+++"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ***": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "***"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "***"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ///": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "///"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "///"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 %%%": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '%%%' (лексическая ошибка)",
+        "fragment": "%%%"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ^^^": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '^^^' (лексическая ошибка)",
+        "fragment": "^^^"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 &&&": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '&&&' (лексическая ошибка)",
+        "fragment": "&&&"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 |||": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '|||' (лексическая ошибка)",
+        "fragment": "|||"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ~~~": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '~~~' (лексическая ошибка)",
+        "fragment": "~~~"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ```": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '```' (лексическая ошибка)",
+        "fragment": "```"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 @@@": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '@@@' (лексическая ошибка)",
+        "fragment": "@@@"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ###": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '###' (лексическая ошибка)",
+        "fragment": "###"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 $$$": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';', найдено '$$$' (лексическая ошибка)",
+        "fragment": "$$$"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 (((": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "((("
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 )))": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": ")))"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 [[[": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "[[["
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ]]]": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "]]]"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 {{{": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "{{{"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 }}}": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 22,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "}}}"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 <><>": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "<><>"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 !=!=": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "!=!="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ====": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "===="
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "===="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 <=<=": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "<=<="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 >=>=": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": ">=>="
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ++--": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "++--"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "++--"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 **//": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "**//"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "**//"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 %%^^": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';', найдено '%%^^' (лексическая ошибка)",
+        "fragment": "%%^^"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 !!??": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "!!"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 23,
+        "message": "Ожидался символ ';', найдено '??' (лексическая ошибка)",
+        "fragment": "??"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 @@##": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';', найдено '@@##' (лексическая ошибка)",
+        "fragment": "@@##"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 $$%%": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';', найдено '$$%%' (лексическая ошибка)",
+        "fragment": "$$%%"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ^^&&": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';', найдено '^^&&' (лексическая ошибка)",
+        "fragment": "^^&&"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 **((": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидался оператор '=' или составной оператор (+=, -=, ...)",
+        "fragment": "**"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 21,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "**"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 22,
+        "end": 23,
+        "message": "Ожидался символ '('. Получена последовательность '(('.",
+        "fragment": "(("
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ))))": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 20,
+        "end": 23,
+        "message": "Ожидался символ ';' в конце конструкции",
+        "fragment": "))))"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while number < 5 ;;;;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 21,
+        "end": 21,
+        "message": "Лишние символы после завершения конструкции",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1 {\n} while number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 13,
+        "end": 13,
+        "message": "Ожидался символ ';' в конце оператора",
+        "fragment": "{"
+      }
+    ]
+  },
+  "repeat {\nnumber += 1\n} while ( ( ( ( 5 ) ) ) );": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 17,
+        "end": 17,
+        "message": "В условии ожидался идентификатор",
+        "fragment": "5"
+      }
+    ]
+  },
+  "repeat {\n\tnumber += 1\n} while number < 5; ; ;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 21,
+        "end": 21,
+        "message": "Лишние символы после завершения конструкции",
+        "fragment": ";"
+      }
+    ]
+  },
+  "repeat {{\n\tnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 9,
+        "message": "Ожидался символ '{'. Получена последовательность '{{'.",
+        "fragment": "{{"
+      }
+    ]
+  },
+  "repeat {{{\n\tnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 10,
+        "message": "Ожидался символ '{'. Получена последовательность '{{{'.",
+        "fragment": "{{{"
+      }
+    ]
+  },
+  "repeat {{{\n\tnumber += {\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 10,
+        "message": "Ожидался символ '{'. Получена последовательность '{{{'.",
+        "fragment": "{{{"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 12,
+        "end": 12,
+        "message": "Ожидалось значение выражения (идентификатор или число)",
+        "fragment": "{"
+      }
+    ]
+  },
+  "repeat {{{\n\tnumber += }\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 10,
+        "message": "Ожидался символ '{'. Получена последовательность '{{{'.",
+        "fragment": "{{{"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 12,
+        "end": 12,
+        "message": "Ожидалось значение выражения (идентификатор или число)",
+        "fragment": "}"
+      }
+    ]
+  },
+  "repeat {\n\tnumber += 1\n{ while number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 1,
+        "message": "Ожидался символ ';' в конце оператора",
+        "fragment": "{"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 19,
+        "end": 19,
+        "message": "Ожидался символ '}'",
+        "fragment": ""
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 19,
+        "end": 19,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": ""
+      }
+    ]
+  },
+  "repeat \n\tnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 2,
+        "end": 7,
+        "message": "Ожидался символ '{'",
+        "fragment": "number"
+      }
+    ]
+  },
+  "repeat }\n\tnumber += 1\n} while number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Символ '}' здесь недопустим: перед телом цикла должна быть '{'",
+        "fragment": "}"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 2,
+        "end": 7,
+        "message": "Ожидался символ '{'",
+        "fragment": "number"
+      }
+    ]
+  },
+  "repeat }{\n\tnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Символ '}' здесь недопустим: перед телом цикла должна быть '{'",
+        "fragment": "}"
+      }
+    ]
+  },
+  "repeat }{{\n\tnumber += 1\n} while number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Символ '}' здесь недопустим: перед телом цикла должна быть '{'",
+        "fragment": "}"
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 9,
+        "end": 10,
+        "message": "Ожидался символ '{'. Получена последовательность '{{'.",
+        "fragment": "{{"
+      }
+    ]
+  },
+  "repeat }{}\n\tnumber += 1\n} while number < 5;": {
+    "status": "incorrect",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 8,
+        "end": 8,
+        "message": "Символ '}' здесь недопустим: перед телом цикла должна быть '{'",
+        "fragment": "}"
+      },
+      {
+        "source": "analyzer",
+        "line": 1,
+        "start": 10,
+        "end": 10,
+        "message": "Символ '}' в этой позиции недопустим (ожидался оператор в теле цикла)",
+        "fragment": "}"
+      },
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 2,
+        "end": 7,
+        "message": "Ожидалось ключевое слово while",
+        "fragment": "number"
+      }
+    ]
+  },
+  "repeat \n\tnumber += 1\nwhi@le number < 5;": {
+    "status": "correct",
+    "errors": [
+      {
+        "source": "analyzer",
+        "line": 2,
+        "start": 2,
+        "end": 7,
+        "message": "Ожидался символ '{'",
+        "fragment": "number"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 1,
+        "end": 6,
+        "message": "Ожидалось ключевое слово while (лексическая ошибка)",
+        "fragment": "whi@le"
+      },
+      {
+        "source": "analyzer",
+        "line": 3,
+        "start": 18,
+        "end": 18,
+        "message": "Ожидался символ '}'",
+        "fragment": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,1000 @@
+repeat {
+number += 1
+number < 5;
+
+repete {
+number += 1
+} while number < 5;
+
+repeat
+number += 1
+} while number < 5;
+
+repeat {
+number += 1
+while ;
+
+repeat {
+number += 1
+}; while number < 5;
+
+repeat {
+number += 1
+} while number < 5 { };
+
+repeat {
+number += 1
+} while ( );
+
+while number < 5
+number += 1
+} repeat;
+
+repeat {
+number += 1
+} while number < 5
+
+repeat (
+number += 1
+) while number < 5;
+
+repeat {
+number += 1
+while number < 5;
+
+{
+number += 1
+} while number < 5;
+
+repeat {
+number += 1
+while number < 5
+
+repeat {
+number += 1
+} repeat number < 5;
+
+repeat {
+number += 1
+} while while number < 5;
+
+repeat {
+number += 1
+} if number < 5;
+
+repeat {
+number += 1
+} while < 5;
+
+repeat {
+number += 1
+} while number < ;
+
+repeat {
+number += 1
+} while number < 5 ;;
+
+repeat {
+number += 1
+} while (number < 5;
+
+repeat {
+number += 1
+} while number < 5 );
+
+repeat {
+number += 1
+} while number < 5 {
+
+repeat {
+number += 1
+} while { number < 5 };
+
+repeat [
+number += 1
+] while number < 5;
+
+repeat {
+number += 1
+} do while number < 5;
+
+repeat
+{
+while number < 5;
+
+repeat {
+number += 1
+} while (number < 5;);
+
+repeat {
+number += 1
+} while (number < 5)
+
+repeat {
+number += 1
+} while number < 5 .
+
+repeat {
+number += 1
+while (number < 5);
+
+repetir {
+number += 1
+} while number < 5;
+
+repeat {
+number += 1
+} while number = 5;
+
+repeat {
+number += 1
+} while number < 5 +;
+
+repeat {
+number += 1
+} while * 5;
+
+repeat {
+number += 1
+} while number < 5 repeat;
+
+repeat {
+number += 1
+} while (number < 5) { }
+
+repeat {
+number += 1
+} while number < 5 ( );
+
+repeat {
+number += 1
+} while 5 < number < 10;
+
+repeat {
+number += 1
+} while (number < 5 && );
+
+repeat {
+number += 1
+} while ( || number < 5);
+
+repeat {
+number += 1
+} while number < 5 :
+
+repeat {
+number += 1
+} while number < 5 ; ;
+
+repeat {
+number += 1
+} while ( ( number < 5 );
+
+repeat {
+number += 1
+} while number < 5 ) ) ;
+
+repeat {
+number += 1
+} while ! ;
+
+repeat {
+number += 1
+} while number < ; 5
+
+repeat {
+number += 1
+} during number < 5;
+
+repeat {
+number += 1
+} while number < 5 ?
+
+repeat {
+number += 1
+} while number < 5 $
+
+repeat {
+number += 1
+} while number < 5 #
+
+repea!t {
+num@ber += 1
+} while number < 5;
+
+repeat {
+number +#= 1
+} while number < 5;
+
+repeat {
+number += 1
+} whi#le number < 5;
+
+rep$eat {
+number += 1
+} while number < 5;
+
+repeat {
+num%ber += 1
+} while number < 5;
+
+repeat {
+number += 1
+} while num^ber < 5;
+
+repeat {
+number += 1
+} wh&ile number < 5;
+
+repeat {
+number +*= 1
+} while number < 5;
+
+re-peat {
+number += 1
+} while number < 5;
+
+repeat {
+number += 1
+} while number < 5;;;
+
+repeat {
+number +=!!! 1
+} while number < 5;
+
+repeat {
+number += 1
+} whil?e number < 5;
+
+r.e.p.e.a.t {
+number += 1
+} while number < 5;
+
+repeat {
+number += 1
+} while number <<<< 5;
+
+repeat {
+number += 1
+} while number < 5 @#$;
+
+repeat {
+number += 1
+} whil_e number < 5;
+
+repeat {
+numb er += 1
+} while number < 5;
+
+repeat {
+number += 1
+} wh ile number < 5;
+
+repeat {
+number += 1
+} while number < 5 andd;
+
+repeat {
+number += 1
+} while number < 5 orr;
+
+repeat {
+number += 1
+} while number < 5 &&;
+
+repeat {
+number += 1
+} while number < 5 ||;
+
+repeat {
+number += 1
+} while number < 5 !;
+
+repeat {
+number += 1
+} while number < 5 ==;
+
+repeat {
+number += 1
+} while number < 5 !=;
+
+repeat {
+number += 1
+} while number < 5 >;
+
+repeat {
+number += 1
+} while number < 5 <;
+
+repeat {
+number += 1
+} while number < 5 >=;
+
+repeat {
+number += 1
+} while number < 5 <=;
+
+repeat {
+number += 1
+} while number < 5 and;
+
+repeat {
+number += 1
+} while number < 5 or;
+
+repeat {
+number += 1
+} while number < 5 and or;
+
+repeat {
+number += 1
+} while number < 5 or and;
+
+repeat {
+number += 1
+} while number < 5 and and;
+
+repeat {
+number += 1
+} while number < 5 or or;
+
+repeat {
+number += 1
+} while number < 5 and or or;
+
+repeat {
+number += 1
+} while number < 5 or and and;
+
+repeat {
+number += 1
+} while number < 5 and and and;
+
+repeat {
+number += 1
+} while number < 5 or or or;
+
+repeat {
+number += 1
+} while number < 5 and or and or;
+
+repeat {
+number += 1
+} while number < 5 or and or and;
+
+repeat {
+number += 1
+} while number < 5 and or or or;
+
+repeat {
+number += 1
+} while number < 5 or and and and;
+
+repeat {
+number += 1
+} while number < 5 and and and and;
+
+repeat {
+number += 1
+} while number < 5 or or or or;
+
+repeat {
+number += 1
+} while number < 5 and or or or or;
+
+repeat {
+number += 1
+} while number < 5 or and and and and;
+
+repeat {
+number += 1
+} while number < 5 and and and and and;
+
+repeat {
+number += 1
+} while number < 5 or or or or or;
+
+repeat {
+number += 1
+} while number < 5 and or or or or or;
+
+r3p3at {
+num8er += 1
+} wh1le number < 5;
+
+repeat {
+number += 1
+} while n_u_m_b_e_r < 5;
+
+rep...eat {
+num,,,ber += 1
+} whi---le number < 5;
+
+repeat {
+number +++= 1
+} while number === 5;
+
+repeat {
+number += 1
+} while number < 5 !!!;
+
+repeat {
+number += 1
+} while number < 5 ???;
+
+repeat {
+number += 1
+} while number < 5 :::;
+
+repeat {
+number += 1
+} while number < 5 ;;;
+
+repeat {
+number += 1
+} while number < 5 ,,,
+
+repeat {
+number += 1
+} while number < 5 ...
+
+repeat {
+number += 1
+} while number < 5 ---
+
+repeat {
+number += 1
+} while number < 5 ___
+
+repeat {
+number += 1
+} while number < 5 +++
+
+repeat {
+number += 1
+} while number < 5 ---
+
+repeat {
+number += 1
+} while number < 5 ***
+
+repeat {
+number += 1
+} while number < 5 ///
+
+repeat {
+number += 1
+} while number < 5 %%%
+
+repeat {
+number += 1
+} while number < 5 ^^^
+
+repeat {
+number += 1
+} while number < 5 &&&
+
+repeat {
+number += 1
+} while number < 5 |||
+
+repeat {
+number += 1
+} while number < 5 ~~~
+
+repeat {
+number += 1
+} while number < 5 ```
+
+repeat {
+number += 1
+} while number < 5 @@@
+
+repeat {
+number += 1
+} while number < 5 ###
+
+repeat {
+number += 1
+} while number < 5 $$$
+
+repeat {
+number += 1
+} while number < 5 %%%
+
+repeat {
+number += 1
+} while number < 5 ^^^
+
+repeat {
+number += 1
+} while number < 5 &&&
+
+repeat {
+number += 1
+} while number < 5 ***
+
+repeat {
+number += 1
+} while number < 5 (((
+
+repeat {
+number += 1
+} while number < 5 )))
+
+repeat {
+number += 1
+} while number < 5 [[[
+
+repeat {
+number += 1
+} while number < 5 ]]]
+
+repeat {
+number += 1
+} while number < 5 {{{
+
+repeat {
+number += 1
+} while number < 5 }}}
+
+repeat {
+number += 1
+} while number < 5 <><>
+
+repeat {
+number += 1
+} while number < 5 !=!=
+
+repeat {
+number += 1
+} while number < 5 ====
+
+repeat {
+number += 1
+} while number < 5 <=<=
+
+repeat {
+number += 1
+} while number < 5 >=>=
+
+repeat {
+number += 1
+} while number < 5 ++--
+
+repeat {
+number += 1
+} while number < 5 **//
+
+repeat {
+number += 1
+} while number < 5 %%^^
+
+repeat {
+number += 1
+} while number < 5 !!??
+
+repeat {
+number += 1
+} while number < 5 @@##
+
+repeat {
+number += 1
+} while number < 5 $$%%
+
+repeat {
+number += 1
+} while number < 5 ^^&&
+
+repeat {
+number += 1
+} while number < 5 **((
+
+repeat {
+number += 1
+} while number < 5 ))))
+
+repeat {
+number += 1
+} while number < 5 ;;;;
+
+repeat {
+number += 1 {
+} while number < 5;
+
+repeat {
+number += 1
+} while { number < 5 };
+
+repeat {
+number += 1
+} while ( ( ( ( 5 ) ) ) );
+
+repeat {
+number += ( 1 + 2 * ( 3 / ) )
+} while number < 5;
+
+repeat {
+number += 1
+} while repeat { number < 5 };
+
+repeat {
+number += 1
+} while while while number < 5;
+
+repeat {
+number += 1
+} while number < 5 or and or;
+
+repeat {
+number += 1
+} while ( number and or < 5 );
+
+repeat {
+number += 1
+} while < 5 < 10 < 15;
+
+repeat {
+number += 1
+} while ( ( ( number < 5 ) ) ;
+
+repeat {
+number += 1
+} while ( ) ( ) ( ) ;
+
+repeat {
+number += 1
+} while number < 5 + - * / ;
+
+repeat {
+number += 1
+} while ( ( number + 1 ) ( number - 2 ) );
+
+repeat {
+number += 1
+} while ; ; ; ; ;
+
+repeat {
+number += 1
+} while ( ( ( ( ( ( ( ( 5 ) ) ) ) ) ) ) );
+
+repeat {
+number += 1
+} while 1 2 3 4 5;
+
+repeat {
+number += 1
+} while number < 5 and or or and;
+
+repeat {
+number += 1
+} while or and and or;
+
+repeat {
+number += 1
+} while number < ( 5 or 10 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( );
+
+repeat {
+number += 1
+} while ( number < 5 ) or and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) or ( number < 30 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) and ( number < 30 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) and ( number < 30 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) or ( number < 30 ) and ( number < 35 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) and ( number < 30 ) or ( number < 35 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) and ( number < 30 ) or ( number < 35 ) and ( number < 40 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 ) or ( number < 45 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 ) and ( number < 45 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) and ( number < 45 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) or ( number < 45 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 ) or ( number < 45 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 ) and ( number < 45 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) and ( number < 30 ) or ( number < 35 ) and ( number < 40 ) or ( number < 45 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) and ( number < 45 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 ) or ( number < 45 ) or ( number < 50 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 ) and ( number < 45 ) and ( number < 50 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) and ( number < 45 ) or ( number < 50 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) or ( number < 45 ) and ( number < 50 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 ) or ( number < 45 ) or ( number < 50 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 ) and ( number < 45 ) and ( number < 50 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) and ( number < 30 ) or ( number < 35 ) and ( number < 40 ) or ( number < 45 ) and ( number < 50 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) and ( number < 45 ) or ( number < 50 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 ) or ( number < 45 ) or ( number < 50 ) or ( number < 55 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 ) and ( number < 45 ) and ( number < 50 ) and ( number < 55 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) and ( number < 45 ) or ( number < 50 ) and ( number < 55 );
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) or ( number < 15 ) and ( number < 20 ) or ( number < 25 ) or ( number < 30 ) and ( number < 35 ) or ( number < 40 ) or ( number < 45 ) and ( number < 50 ) or ( number < 55 );
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) or ( number < 15 ) or ( number < 20 ) or ( number < 25 ) or ( number < 30 ) or ( number < 35 ) or ( number < 40 ) or ( number < 45 ) or ( number < 50 ) or ( number < 55 ) or ;
+
+repeat {
+number += 1
+} while ( number < 5 ) and ( number < 10 ) and ( number < 15 ) and ( number < 20 ) and ( number < 25 ) and ( number < 30 ) and ( number < 35 ) and ( number < 40 ) and ( number < 45 ) and ( number < 50 ) and ( number < 55 ) and ;
+
+repeat {
+number += 1
+} while ( number < 5 ) or ( number < 10 ) and ( number < 15 ) or ( number < 20 ) and ( number < 25 ) and ( number < 30 ) or ( number < 35 ) and ( number < 40 ) or ( number < 45 ) and ( number < 50 ) or ( number < 55 ) and ;
+
