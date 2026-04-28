@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from scanner import Scanner, TOKEN_TYPES
-from parser import analyze_syntax
+from antlr_parser import analyze_syntax_antlr
 
 
 class LineNum(QWidget):
@@ -914,7 +914,7 @@ VN = {&lt;START&gt;, &lt;STMT_LIST&gt;, &lt;CONDITION&gt;, &lt;STMT&gt;, &lt;ID&
 
         scanner = Scanner(text)
         tokens = scanner.scan_tokens()
-        result = analyze_syntax(tokens)
+        result = analyze_syntax_antlr(text)
 
         self._fill_lexer_table(tokens)
         self._fill_parser_table(result)
