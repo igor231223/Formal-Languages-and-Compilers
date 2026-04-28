@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import webbrowser
 
 from PyQt6.QtCore import Qt, QSize, QRect, QEvent
 from PyQt6.QtGui import QFont, QKeySequence, QAction, QIcon, QColor, QPalette, QTextCursor, QPainter
@@ -827,7 +828,10 @@ VN = {&lt;START&gt;, &lt;STMT_LIST&gt;, &lt;CONDITION&gt;, &lt;STMT&gt;, &lt;ID&
         self.show_text_dialog(self.text_source_code_act.text(), html)
 
     def show_text_coursework(self):
-        html = "<b>Курсовая</b><br><br>Пока пусто."
+        if "https://docs.google.com/document/d/1wxAo7OC5JSjKJj0BrCxaDFwG4C4ohbCD/edit?usp=sharing&ouid=107816324771143445026&rtpof=true&sd=true".strip():
+            webbrowser.open("https://docs.google.com/document/d/1wxAo7OC5JSjKJj0BrCxaDFwG4C4ohbCD/edit?usp=sharing&ouid=107816324771143445026&rtpof=true&sd=true".strip())
+            return
+        html = "<b>Курсовая</b><br><br>Ссылка на документ курсовой работы."
         self.show_text_dialog(self.text_coursework_act.text(), html)
 
     def _refresh_output_tabs_headers(self):
