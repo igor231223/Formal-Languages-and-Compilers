@@ -46,8 +46,96 @@ class Scanner:
         while not self.is_at_end():
             token = self.scan_token()
             if token:
-                self.tokens.append(token)
+                self.tokens.extend(self._split_edge_noise_error_token(token))
         return self.tokens
+
+    def _split_edge_noise_error_token(self, token):
+        if token.code != TOKEN_TYPES["ERROR"][0]:
+            return [token]
+
+        lex = token.lexeme or ""
+        if len(lex) <= 1 or not any(ch.isalpha() for ch in lex):
+            return [token]
+
+        lead_len = 0
+        i = 0
+        while i < len(lex) and not lex[i].isalnum():
+            lead_len += 1
+            i += 1
+
+        tail_len = 0
+        j = len(lex) - 1
+        while j >= 0 and not lex[j].isalnum():
+            tail_len += 1
+            j -= 1
+
+        if lead_len + tail_len >= len(lex):
+            return [token]
+        if lead_len == 0 and tail_len == 0:
+            return [token]
+
+        core_start_idx = lead_len
+        core_end_idx = len(lex) - tail_len
+        core = lex[core_start_idx:core_end_idx]
+        if not core:
+            return [token]
+
+        out = []
+        if lead_len > 0:
+            lead = lex[:lead_len]
+            out.append(
+                Token(
+                    TOKEN_TYPES["ERROR"][0],
+                    TOKEN_TYPES["ERROR"][1],
+                    lead,
+                    token.line,
+                    token.start_pos,
+                    token.start_pos + lead_len - 1,
+                )
+            )
+
+        core_start_pos = token.start_pos + lead_len
+        core_end_pos = core_start_pos + len(core) - 1
+        out.append(self._build_core_token_from_error(core, token.line, core_start_pos, core_end_pos))
+
+        if tail_len > 0:
+            tail = lex[-tail_len:]
+            out.append(
+                Token(
+                    TOKEN_TYPES["ERROR"][0],
+                    TOKEN_TYPES["ERROR"][1],
+                    tail,
+                    token.line,
+                    core_end_pos + 1,
+                    token.end_pos,
+                )
+            )
+        return out
+
+    def _build_core_token_from_error(self, core, line, start_pos, end_pos):
+        if core == "repeat":
+            code, type_name = TOKEN_TYPES["REPEAT"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "while":
+            code, type_name = TOKEN_TYPES["WHILE"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "and":
+            code, type_name = TOKEN_TYPES["AND"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "or":
+            code, type_name = TOKEN_TYPES["OR"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "not":
+            code, type_name = TOKEN_TYPES["NOT"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core.isdigit():
+            code, type_name = TOKEN_TYPES["DIGIT_NUMBER"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core and core[0].isalpha() and core.isascii() and core.replace("_", "").isalnum():
+            code, type_name = TOKEN_TYPES["IDENTIFIER"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        code, type_name = TOKEN_TYPES["ERROR"]
+        return Token(code, type_name, core, line, start_pos, end_pos)
 
     def scan_token(self):
         char = self.advance()
@@ -99,8 +187,6 @@ class Scanner:
             ):
                 lexeme += self.advance()
 
-            # Обобщенно ловим "разорванные" идентификаторы:
-            # rep{eat, nu==mber, nu<mber и подобные.
             if self._looks_like_broken_identifier_tail():
                 while not self.is_at_end() and self.peek() not in " \n\t;":
                     lexeme += self.advance()
@@ -110,7 +196,10 @@ class Scanner:
 
             if not self.is_at_end() and not self.could_start_token(self.peek()):
                 lexeme += self.advance()
-                while not self.is_at_end() and self.peek().isalnum():
+                while (
+                    not self.is_at_end()
+                    and self.peek() not in " \n\t{};()[]<>!=+-*/"
+                ):
                     lexeme += self.advance()
                 code, type_name = TOKEN_TYPES["ERROR"]
                 end_pos = start_pos + len(lexeme) - 1
@@ -133,8 +222,6 @@ class Scanner:
             return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
         lexeme = char
-        while not self.is_at_end() and not self.could_start_token(self.peek()):
-            lexeme += self.advance()
         code, type_name = TOKEN_TYPES["ERROR"]
         end_pos = start_pos + len(lexeme) - 1
         return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
@@ -182,6 +269,12 @@ class Scanner:
         lexeme = first_char
         while not self.is_at_end() and self.peek() in "<>=!+-*/":
             lexeme += self.advance()
+        if not self.is_at_end() and self.peek() not in " \n\t{};()[]":
+            while not self.is_at_end() and self.peek() not in " \n\t{};()[]":
+                lexeme += self.advance()
+            code, type_name = TOKEN_TYPES["ERROR"]
+            end_pos = start_pos + len(lexeme) - 1
+            return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
         valid_map = {
             "<": "OPERATOR_COMPARE",
@@ -211,9 +304,6 @@ class Scanner:
         return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
     def scan_bracket_or_separator_sequence(self, first_char, start_pos):
-        # Склеиваем длинные повторы одного и того же символа в ERROR-токен.
-        # Исключение: ';' оставляем покомпонентно, чтобы парсер корректно
-        # выдавал синтаксические ошибки о лишних/пропущенных ';'.
         if first_char == ";":
             code, type_name = TOKEN_TYPES["SEMICOLON"]
             return Token(code, type_name, first_char, self.line, start_pos, start_pos)

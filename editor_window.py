@@ -194,9 +194,21 @@ class EditorWindow(QMainWindow):
         self.menu_cut.setText(self.tr("edit_cut"))
         self.menu_copy.setText(self.tr("edit_copy"))
         self.menu_paste.setText(self.tr("edit_paste"))
+        self.menu_delete.setText(self.tr("edit_delete"))
         self.menu_select_all.setText(self.tr("edit_select_all"))
 
         self.menu_run.setText(self.tr("run"))
+        if getattr(self, "text_menu", None):
+            self.text_menu.setTitle(self.tr("text"))
+        self.text_task_act.setText(self.tr("text_item_task"))
+        self.text_grammar_act.setText(self.tr("text_item_grammar"))
+        self.text_grammar_classification_act.setText(self.tr("text_item_grammar_classification"))
+        self.text_analysis_method_act.setText(self.tr("text_item_analysis_method"))
+        self.text_error_diagnostics_act.setText(self.tr("text_item_error_diagnostics"))
+        self.text_test_example_act.setText(self.tr("text_item_test_example"))
+        self.text_references_act.setText(self.tr("text_item_references"))
+        self.text_source_code_act.setText(self.tr("text_item_source_code"))
+        self.text_coursework_act.setText(self.tr("text_item_coursework"))
 
         self.lang_ru_act.setText(self.tr("lang_ru"))
         self.lang_en_act.setText(self.tr("lang_en"))
@@ -273,6 +285,7 @@ class EditorWindow(QMainWindow):
         parser_layout.addWidget(self.parser_summary_label)
         parser_layout.addWidget(self.parser_table)
         self.output_tabs.addTab(parser_tab, "Parser")
+        self.output_tabs.setCurrentIndex(1)
 
         self.output_panel = QWidget()
         output_layout = QVBoxLayout(self.output_panel)
@@ -331,6 +344,10 @@ class EditorWindow(QMainWindow):
         self.menu_paste.setShortcut(QKeySequence("Ctrl+V"))
         self.menu_paste.triggered.connect(self.editor.paste)
 
+        self.menu_delete = QAction(self)
+        self.menu_delete.setShortcut(QKeySequence("Del"))
+        self.menu_delete.triggered.connect(self.delete_text)
+
         self.menu_select_all = QAction(self)
         self.menu_select_all.setShortcut(QKeySequence("Ctrl+A"))
         self.menu_select_all.triggered.connect(self.editor.selectAll)
@@ -338,6 +355,29 @@ class EditorWindow(QMainWindow):
         self.menu_run = QAction(self)
         self.menu_run.setShortcut(QKeySequence("F5"))
         self.menu_run.triggered.connect(self.run_analysis)
+
+        self.text_task_act = QAction(self)
+        self.text_grammar_act = QAction(self)
+        self.text_grammar_classification_act = QAction(self)
+        self.text_analysis_method_act = QAction(self)
+        self.text_error_diagnostics_act = QAction(self)
+        self.text_test_example_act = QAction(self)
+        self.text_references_act = QAction(self)
+        self.text_source_code_act = QAction(self)
+        self.text_coursework_act = QAction(self)
+        self.text_task_act.triggered.connect(self.show_text_task)
+        self.text_grammar_act.triggered.connect(self.show_text_grammar)
+        self.text_grammar_classification_act.triggered.connect(
+            self.show_text_grammar_classification
+        )
+        self.text_analysis_method_act.triggered.connect(self.show_text_analysis_method)
+        self.text_error_diagnostics_act.triggered.connect(
+            self.show_text_error_diagnostics
+        )
+        self.text_test_example_act.triggered.connect(self.show_text_test_example)
+        self.text_references_act.triggered.connect(self.show_text_references)
+        self.text_source_code_act.triggered.connect(self.show_text_source_code)
+        self.text_coursework_act.triggered.connect(self.show_text_coursework)
 
         self.lang_ru_act = QAction(self)
         self.lang_ru_act.setCheckable(True)
@@ -399,6 +439,16 @@ class EditorWindow(QMainWindow):
         self.tb_about.setIcon(QIcon(resource_path("icons/about.svg")))
         self.tb_about.triggered.connect(self.show_about)
 
+        self.zoom_in_act = QAction(self)
+        self.zoom_in_act.setShortcut(QKeySequence("Ctrl+="))
+        self.zoom_in_act.triggered.connect(self.increase_font_size)
+        self.addAction(self.zoom_in_act)
+
+        self.zoom_out_act = QAction(self)
+        self.zoom_out_act.setShortcut(QKeySequence("Ctrl+-"))
+        self.zoom_out_act.triggered.connect(self.decrease_font_size)
+        self.addAction(self.zoom_out_act)
+
     def create_menus(self):
         mb = self.menuBar()
 
@@ -417,11 +467,23 @@ class EditorWindow(QMainWindow):
         edit_menu.addAction(self.menu_cut)
         edit_menu.addAction(self.menu_copy)
         edit_menu.addAction(self.menu_paste)
+        edit_menu.addAction(self.menu_delete)
         edit_menu.addSeparator()
         edit_menu.addAction(self.menu_select_all)
 
         run_menu = mb.addMenu(self.tr("run"))
         run_menu.addAction(self.menu_run)
+
+        self.text_menu = mb.addMenu(self.tr("text"))
+        self.text_menu.addAction(self.text_task_act)
+        self.text_menu.addAction(self.text_grammar_act)
+        self.text_menu.addAction(self.text_grammar_classification_act)
+        self.text_menu.addAction(self.text_analysis_method_act)
+        self.text_menu.addAction(self.text_error_diagnostics_act)
+        self.text_menu.addAction(self.text_test_example_act)
+        self.text_menu.addAction(self.text_references_act)
+        self.text_menu.addAction(self.text_source_code_act)
+        self.text_menu.addAction(self.text_coursework_act)
 
         lang_menu = mb.addMenu(self.tr("language"))
         lang_menu.addAction(self.lang_ru_act)
@@ -504,6 +566,49 @@ class EditorWindow(QMainWindow):
         col_str = self.tr('status_column')
         
         self.status_label.setText(f"{line_str} {line} | {col_str} {column}")
+
+    def delete_text(self):
+        cursor = self.editor.textCursor()
+        cursor.deleteChar()
+
+    def increase_font_size(self):
+        self.change_editor_font_size(1)
+
+    def decrease_font_size(self):
+        self.change_editor_font_size(-1)
+
+    def change_editor_font_size(self, delta):
+        widgets = [
+            self,
+            self.menuBar(),
+            self.status_label,
+            self.editor,
+            self.output_tabs,
+            self.lexer_summary_label,
+            self.parser_summary_label,
+            self.lexer_table,
+            self.parser_table,
+        ]
+        changed = False
+        for widget in widgets:
+            if widget is None:
+                continue
+            font = widget.font()
+            current_size = font.pointSize()
+            if current_size <= 0:
+                continue
+            new_size = max(8, min(40, current_size + delta))
+            if new_size == current_size:
+                continue
+            font.setPointSize(new_size)
+            widget.setFont(font)
+            changed = True
+        if not changed:
+            return
+        self.editor.update_line_number_area_width()
+        self.editor.setTabStopDistance(
+            4 * self.editor.fontMetrics().horizontalAdvance(" ")
+        )
 
     def maybe_save(self) -> bool:
         if not self.is_dirty:
@@ -598,13 +703,10 @@ class EditorWindow(QMainWindow):
 
     def get_detailed_help(self):
         sections = [
-            ("help_section_features", "help_features"),
             ("help_section_hotkeys", "help_hotkeys"),
             ("help_section_analysis", "help_analysis"),
             ("help_section_i18n", "help_i18n"),
-            ("help_section_interface", "help_interface"),
             ("help_section_additional", "help_additional"),
-            ("help_section_technical", "help_technical")
         ]
         
         help_parts = [f"<b>{self.tr('app_title')}</b><br><br>"]
@@ -618,6 +720,115 @@ class EditorWindow(QMainWindow):
 
     def show_about(self):
         QMessageBox.about(self, self.tr("about_title"), self.tr("about_text"))
+
+    def show_text_dialog(self, title, html):
+        dlg = QDialog(self)
+        dlg.setWindowTitle(title)
+        dlg.resize(760, 560)
+        layout = QVBoxLayout(dlg)
+        browser = QTextBrowser(dlg)
+        browser.setReadOnly(True)
+        browser.setOpenExternalLinks(True)
+        browser.setHtml(html)
+        layout.addWidget(browser)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        buttons.accepted.connect(dlg.accept)
+        layout.addWidget(buttons)
+        dlg.exec()
+
+    def show_text_task(self):
+        html = (
+            "<b>Постановка задачи</b><br><br>"
+            "Разработать пользовательский интерфейс (GUI) для языкового процессора.<br><br>"
+            "Требуется реализовать:<br>"
+            "• Текстовый редактор с нумерацией строк<br>"
+            "• Лексический анализатор<br>"
+            "• Синтаксический анализатор<br>"
+            "• Вывод токенов и ошибок<br>"
+            "• Поддержку русского и английского языка"
+        )
+        self.show_text_dialog(self.text_task_act.text(), html)
+
+    def show_text_grammar(self):
+        html = """
+<b>Грамматика</b><br><br>
+<pre>
+G[&lt;START&gt;]:
+1) &lt;START&gt; -&gt; "repeat" { &lt;STMT_LIST&gt; } "while" &lt;CONDITION&gt; ;
+2) &lt;STMT_LIST&gt; -&gt; &lt;STMT&gt; | &lt;STMT&gt; &lt;STMT_LIST&gt;
+3) &lt;STMT&gt; -&gt; &lt;ID&gt; &lt;ASSIGN_OP&gt; &lt;EXPR&gt; ;
+4) &lt;ASSIGN_OP&gt; -&gt; "=" | "+=" | "-=" | "*=" | "/="
+5) &lt;CONDITION&gt; -&gt; &lt;EXPR&gt; &lt;REL_OP&gt; &lt;EXPR&gt; | &lt;CONDITION&gt; &lt;LOGIC_OP&gt; &lt;CONDITION&gt;
+6) &lt;REL_OP&gt; -&gt; "==" | "!=" | "&lt;" | "&gt;" | "&lt;=" | "&gt;="
+7) &lt;LOGIC_OP&gt; -&gt; "and" | "or"
+8) &lt;EXPR&gt; -&gt; &lt;ID&gt; | &lt;NUMBER&gt; | ( &lt;EXPR&gt; &lt;ARITH_OP&gt; &lt;EXPR&gt; )
+9) &lt;ARITH_OP&gt; -&gt; "+" | "-" | "*" | "/"
+10) &lt;ID&gt; -&gt; letter | letter &lt;ID&gt; | letter &lt;NUMBER&gt;
+11) &lt;NUMBER&gt; -&gt; digit | digit &lt;NUMBER&gt;
+
+Z = &lt;START&gt;
+VT = {a, b, …, z, A, B, …, Z, 0, 1, …, 9, ;, {, }, +, -, *, /, =, &, &gt;, &lt;, !, repeat, while, or, and}
+VN = {&lt;START&gt;, &lt;STMT_LIST&gt;, &lt;CONDITION&gt;, &lt;STMT&gt;, &lt;ID&gt;, &lt;ASSIGN_OP&gt;, &lt;EXPR&gt;, &lt;REL_OP&gt;, &lt;LOGIC_OP&gt;, &lt;NUMBER&gt;, &lt;ARITH_OP&gt;}
+</pre>
+"""
+        self.show_text_dialog(self.text_grammar_act.text(), html)
+
+    def show_text_grammar_classification(self):
+        html = (
+            "<b>Классификация грамматики</b><br><br>"
+            "Грамматика относится к классу контекстно-свободных грамматик."
+        )
+        self.show_text_dialog(self.text_grammar_classification_act.text(), html)
+
+    def show_text_analysis_method(self):
+        html = (
+            "<b>Методология анализа</b><br><br>"
+            "• Лексический анализ - на основе регулярных выражений и ручного разбора<br>"
+            "• Синтаксический анализ - метод рекурсивного спуска"
+        )
+        self.show_text_dialog(self.text_analysis_method_act.text(), html)
+
+    def show_text_error_diagnostics(self):
+        html = (
+            "<b>Диагностика и нейтрализация ошибок</b><br><br>"
+            "Используется метод Айронса (Irons) для диагностики и восстановления разбора: "
+            "вставка, удаление, замена и синхронизация токенов. "
+            "Это уменьшает каскадные ошибки и позволяет доводить анализ до конца конструкции."
+        )
+        self.show_text_dialog(self.text_error_diagnostics_act.text(), html)
+
+    def show_text_test_example(self):
+        html = (
+            "<b>Тестовый пример</b><br><br>"
+            "<pre>repeat {\n"
+            "    number += 1\n"
+            "} while number &lt; 5;</pre>"
+        )
+        self.show_text_dialog(self.text_test_example_act.text(), html)
+
+    def show_text_references(self):
+        html = """
+<b>Список литературы</b><br><br>
+1. Шорников Ю.В. Теория и практика языковых процессоров: учеб. пособие / Ю.В. Шорников. – Новосибирск: Изд-во НГТУ, 2022.<br><br>
+2. Хантер Р. Проектирование и конструирование компиляторов / Р. Хантер. – Москва : Мир, 1984. – 232 с.<br><br>
+3. Теория формальных языков и компиляторов [Электронный ресурс] / Электрон. дан. URL:
+<a href="https://dispace.edu.nstu.ru/didesk/course/show/8594">https://dispace.edu.nstu.ru/didesk/course/show/8594</a>,
+свободный. Яз. рус. (дата обращения 13.04.2026).
+"""
+        self.show_text_dialog(self.text_references_act.text(), html)
+
+    def show_text_source_code(self):
+        html = (
+            "<b>Исходный код программы</b><br><br>"
+            '<a href="https://github.com/igor231223/Formal-Languages-and-Compilers/tree/kurs">'
+            "https://github.com/igor231223/Formal-Languages-and-Compilers/tree/kurs"
+            "</a>"
+        )
+        self.show_text_dialog(self.text_source_code_act.text(), html)
+
+    def show_text_coursework(self):
+        html = "<b>Курсовая</b><br><br>Пока пусто."
+        self.show_text_dialog(self.text_coursework_act.text(), html)
 
     def _refresh_output_tabs_headers(self):
         self.lexer_table.setHorizontalHeaderLabels([
@@ -664,11 +875,13 @@ class EditorWindow(QMainWindow):
         cursor.movePosition(cursor.MoveOperation.Start)
         cursor.movePosition(cursor.MoveOperation.Down, n=line_num - 1)
         cursor.movePosition(cursor.MoveOperation.Right, n=pos_start - 1)
-        cursor.movePosition(
-            cursor.MoveOperation.Right,
-            cursor.MoveMode.KeepAnchor,
-            pos_end - pos_start + 1,
-        )
+        fragment_text = item0.text() if item0 is not None else ""
+        if fragment_text:
+            cursor.movePosition(
+                cursor.MoveOperation.Right,
+                cursor.MoveMode.KeepAnchor,
+                max(0, pos_end - pos_start + 1),
+            )
         self.editor.setTextCursor(cursor)
         self.editor.setFocus()
 
