@@ -46,8 +46,96 @@ class Scanner:
         while not self.is_at_end():
             token = self.scan_token()
             if token:
-                self.tokens.append(token)
+                self.tokens.extend(self._split_edge_noise_error_token(token))
         return self.tokens
+
+    def _split_edge_noise_error_token(self, token):
+        if token.code != TOKEN_TYPES["ERROR"][0]:
+            return [token]
+
+        lex = token.lexeme or ""
+        if len(lex) <= 1 or not any(ch.isalpha() for ch in lex):
+            return [token]
+
+        lead_len = 0
+        i = 0
+        while i < len(lex) and not lex[i].isalnum():
+            lead_len += 1
+            i += 1
+
+        tail_len = 0
+        j = len(lex) - 1
+        while j >= 0 and not lex[j].isalnum():
+            tail_len += 1
+            j -= 1
+
+        if lead_len + tail_len >= len(lex):
+            return [token]
+        if lead_len == 0 and tail_len == 0:
+            return [token]
+
+        core_start_idx = lead_len
+        core_end_idx = len(lex) - tail_len
+        core = lex[core_start_idx:core_end_idx]
+        if not core:
+            return [token]
+
+        out = []
+        if lead_len > 0:
+            lead = lex[:lead_len]
+            out.append(
+                Token(
+                    TOKEN_TYPES["ERROR"][0],
+                    TOKEN_TYPES["ERROR"][1],
+                    lead,
+                    token.line,
+                    token.start_pos,
+                    token.start_pos + lead_len - 1,
+                )
+            )
+
+        core_start_pos = token.start_pos + lead_len
+        core_end_pos = core_start_pos + len(core) - 1
+        out.append(self._build_core_token_from_error(core, token.line, core_start_pos, core_end_pos))
+
+        if tail_len > 0:
+            tail = lex[-tail_len:]
+            out.append(
+                Token(
+                    TOKEN_TYPES["ERROR"][0],
+                    TOKEN_TYPES["ERROR"][1],
+                    tail,
+                    token.line,
+                    core_end_pos + 1,
+                    token.end_pos,
+                )
+            )
+        return out
+
+    def _build_core_token_from_error(self, core, line, start_pos, end_pos):
+        if core == "repeat":
+            code, type_name = TOKEN_TYPES["REPEAT"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "while":
+            code, type_name = TOKEN_TYPES["WHILE"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "and":
+            code, type_name = TOKEN_TYPES["AND"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "or":
+            code, type_name = TOKEN_TYPES["OR"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core == "not":
+            code, type_name = TOKEN_TYPES["NOT"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core.isdigit():
+            code, type_name = TOKEN_TYPES["DIGIT_NUMBER"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        if core and core[0].isalpha() and core.isascii() and core.replace("_", "").isalnum():
+            code, type_name = TOKEN_TYPES["IDENTIFIER"]
+            return Token(code, type_name, core, line, start_pos, end_pos)
+        code, type_name = TOKEN_TYPES["ERROR"]
+        return Token(code, type_name, core, line, start_pos, end_pos)
 
     def scan_token(self):
         char = self.advance()
@@ -68,59 +156,11 @@ class Scanner:
             self.line_start = self.pos
             return token
 
-        if char == '{':
-            code, type_name = TOKEN_TYPES["LBRACE"]
-            return Token(code, type_name, char, self.line, start_pos, start_pos)
+        if char in "{};()[]":
+            return self.scan_bracket_or_separator_sequence(char, start_pos)
 
-        if char == '}':
-            code, type_name = TOKEN_TYPES["RBRACE"]
-            return Token(code, type_name, char, self.line, start_pos, start_pos)
-
-        if char == ';':
-            code, type_name = TOKEN_TYPES["SEMICOLON"]
-            return Token(code, type_name, char, self.line, start_pos, start_pos)
-
-        if char == '(':
-            code, type_name = TOKEN_TYPES["LPAREN"]
-            return Token(code, type_name, char, self.line, start_pos, start_pos)
-
-        if char == ')':
-            code, type_name = TOKEN_TYPES["RPAREN"]
-            return Token(code, type_name, char, self.line, start_pos, start_pos)
-
-        if char in ['<', '>']:
-            if self.match('='):
-                lexeme = char + '='
-                code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
-                return Token(code, type_name, lexeme, self.line, start_pos, start_pos + 1)
-            else:
-                code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
-                return Token(code, type_name, char, self.line, start_pos, start_pos)
-            
-        if char == '=':
-            if self.match('='):
-                code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
-                return Token(code, type_name, "==", self.line, start_pos, start_pos + 1)
-            else:
-                code, type_name = TOKEN_TYPES["ASSIGNMENT_OPERATOR"]
-                return Token(code, type_name, char, self.line, start_pos, start_pos)
-
-        if char == '!':
-            if self.match('='):
-                code, type_name = TOKEN_TYPES["OPERATOR_COMPARE"]
-                return Token(code, type_name, "!=", self.line, start_pos, start_pos + 1)
-            else:
-                code, type_name = TOKEN_TYPES["ERROR"]
-                return Token(code, type_name, char, self.line, start_pos, start_pos)
-
-        if char in ['+', '-', '*', '/']:
-            if self.match('='):
-                lexeme = char + '='
-                code, type_name = TOKEN_TYPES["COMPOUND_ASSIGNMENT_OPERATOR"]
-                return Token(code, type_name, lexeme, self.line, start_pos, start_pos + 1)
-            else:
-                code, type_name = TOKEN_TYPES["ARITHMETIC_OPERATOR"]
-                return Token(code, type_name, char, self.line, start_pos, start_pos)
+        if char in "<>=!+-*/%":
+            return self.scan_operator_sequence(char, start_pos)
 
         if char.isdigit():
             lexeme = char
@@ -140,16 +180,26 @@ class Scanner:
 
         if char.isalpha():
             lexeme = char
-            while (
-                not self.is_at_end()
-                and self.peek().isascii()
-                and self.peek().isalnum()
-            ):
-                lexeme += self.advance()
+            while not self.is_at_end():
+                nx = self.peek()
+                if nx == "_" or (nx.isascii() and nx.isalnum()):
+                    lexeme += self.advance()
+                else:
+                    break
+
+            if self._looks_like_broken_identifier_tail():
+                while not self.is_at_end() and self.peek() not in " \n\t;":
+                    lexeme += self.advance()
+                code, type_name = TOKEN_TYPES["ERROR"]
+                end_pos = start_pos + len(lexeme) - 1
+                return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
             if not self.is_at_end() and not self.could_start_token(self.peek()):
                 lexeme += self.advance()
-                while not self.is_at_end() and self.peek().isalnum():
+                while (
+                    not self.is_at_end()
+                    and self.peek() not in " \n\t{};()[]<>!=+-*/%"
+                ):
                     lexeme += self.advance()
                 code, type_name = TOKEN_TYPES["ERROR"]
                 end_pos = start_pos + len(lexeme) - 1
@@ -172,8 +222,6 @@ class Scanner:
             return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
         lexeme = char
-        while not self.is_at_end() and not self.could_start_token(self.peek()):
-            lexeme += self.advance()
         code, type_name = TOKEN_TYPES["ERROR"]
         end_pos = start_pos + len(lexeme) - 1
         return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
@@ -189,13 +237,115 @@ class Scanner:
             return True
         if c == "!":
             return True
-        if c in "+-*/":
+        if c in "+-*/%":
+            return True
+        if c == "_":
             return True
         if c.isdigit():
             return True
         if c.isalpha():
             return True
         return False
+
+    def peek_n(self, offset):
+        i = self.pos + offset
+        if i >= len(self.text):
+            return '\0'
+        return self.text[i]
+
+    def _looks_like_broken_identifier_tail(self):
+        if self.is_at_end():
+            return False
+        if self.peek() not in "<>=!+-*/%{}[]()":
+            return False
+        i = self.pos
+        saw_symbol = False
+        only_arithmetic = True
+        while i < len(self.text) and self.text[i] in "<>=!+-*/%{}[]()":
+            saw_symbol = True
+            c = self.text[i]
+            if c not in "+-*/%":
+                only_arithmetic = False
+            i += 1
+        if not saw_symbol or i >= len(self.text):
+            return False
+        if not self.text[i].isalpha():
+            return False
+        if only_arithmetic:
+            return False
+        return True
+
+    def scan_operator_sequence(self, first_char, start_pos):
+        lexeme = first_char
+        while not self.is_at_end() and self.peek() in "<>=!+-*/%":
+            lexeme += self.advance()
+        if not self.is_at_end():
+            nxt = self.peek()
+            if nxt not in " \n\t{};()[]" and not (
+                nxt.isdigit() or nxt.isalpha() or nxt == "_"
+            ):
+                while not self.is_at_end() and self.peek() not in " \n\t{};()[]":
+                    lexeme += self.advance()
+                code, type_name = TOKEN_TYPES["ERROR"]
+                end_pos = start_pos + len(lexeme) - 1
+                return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+
+        valid_map = {
+            "<": "OPERATOR_COMPARE",
+            ">": "OPERATOR_COMPARE",
+            "<=": "OPERATOR_COMPARE",
+            ">=": "OPERATOR_COMPARE",
+            "==": "OPERATOR_COMPARE",
+            "!=": "OPERATOR_COMPARE",
+            "=": "ASSIGNMENT_OPERATOR",
+            "+=": "COMPOUND_ASSIGNMENT_OPERATOR",
+            "-=": "COMPOUND_ASSIGNMENT_OPERATOR",
+            "*=": "COMPOUND_ASSIGNMENT_OPERATOR",
+            "/=": "COMPOUND_ASSIGNMENT_OPERATOR",
+            "+": "ARITHMETIC_OPERATOR",
+            "-": "ARITHMETIC_OPERATOR",
+            "*": "ARITHMETIC_OPERATOR",
+            "/": "ARITHMETIC_OPERATOR",
+            "%": "ARITHMETIC_OPERATOR",
+        }
+
+        token_type = valid_map.get(lexeme)
+        end_pos = start_pos + len(lexeme) - 1
+        if token_type is None:
+            code, type_name = TOKEN_TYPES["ERROR"]
+            return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+
+        code, type_name = TOKEN_TYPES[token_type]
+        return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+
+    def scan_bracket_or_separator_sequence(self, first_char, start_pos):
+        if first_char == ";":
+            code, type_name = TOKEN_TYPES["SEMICOLON"]
+            return Token(code, type_name, first_char, self.line, start_pos, start_pos)
+
+        lexeme = first_char
+        while not self.is_at_end() and self.peek() == first_char:
+            lexeme += self.advance()
+
+        end_pos = start_pos + len(lexeme) - 1
+        if len(lexeme) > 1:
+            code, type_name = TOKEN_TYPES["ERROR"]
+            return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+
+        valid_single = {
+            "{": "LBRACE",
+            "}": "RBRACE",
+            ";": "SEMICOLON",
+            "(": "LPAREN",
+            ")": "RPAREN",
+        }
+        token_type = valid_single.get(first_char)
+        if token_type is None:
+            code, type_name = TOKEN_TYPES["ERROR"]
+            return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+
+        code, type_name = TOKEN_TYPES[token_type]
+        return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
 
     def advance(self):
         char = self.text[self.pos]

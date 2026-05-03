@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+import webbrowser
+import re
 
 from PyQt6.QtCore import Qt, QSize, QRect, QEvent
 from PyQt6.QtGui import (
@@ -43,12 +45,11 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
 )
 
-import re
-
 from regex_search import find_literal_matches, find_matches
 from scanner import Scanner, TOKEN_TYPES
 from parser import ParseResult
 from semantic_analysis import analyze_program
+from arith_expression import analyze_arith_expression
 
 
 class LineNum(QWidget):
@@ -228,7 +229,7 @@ class SearchPopup(QWidget):
     def _build_preset_combo(self):
         self.preset_combo.blockSignals(True)
         self.preset_combo.clear()
-        for key, _pat in self.REGEX_PRESETS:
+        for _key, _pat in self.REGEX_PRESETS:
             self.preset_combo.addItem("", _pat)
         self.preset_combo.setCurrentIndex(0)
         self.preset_combo.blockSignals(False)
@@ -279,7 +280,6 @@ class EditorWindow(QMainWindow):
         self.current_lang = "ru"
         self.trans = {}
         self._search_popup = None
-
         self.setMinimumHeight(500)
         self.setMinimumWidth(700)
         self.setWindowIcon(QIcon(resource_path("icons/logo.svg")))
@@ -305,7 +305,7 @@ class EditorWindow(QMainWindow):
         self.search_table.cellClicked.connect(
             lambda r, c: self.go_to_error_cell(self.search_table, r, c)
         )
-        
+
         self.editor.cursorPositionChanged.connect(self.update_cursor_status)
 
         self.update_cursor_status()
@@ -341,9 +341,21 @@ class EditorWindow(QMainWindow):
         self.menu_cut.setText(self.tr("edit_cut"))
         self.menu_copy.setText(self.tr("edit_copy"))
         self.menu_paste.setText(self.tr("edit_paste"))
+        self.menu_delete.setText(self.tr("edit_delete"))
         self.menu_select_all.setText(self.tr("edit_select_all"))
 
         self.menu_run.setText(self.tr("run"))
+        if getattr(self, "text_menu", None):
+            self.text_menu.setTitle(self.tr("text"))
+        self.text_task_act.setText(self.tr("text_item_task"))
+        self.text_grammar_act.setText(self.tr("text_item_grammar"))
+        self.text_grammar_classification_act.setText(self.tr("text_item_grammar_classification"))
+        self.text_analysis_method_act.setText(self.tr("text_item_analysis_method"))
+        self.text_error_diagnostics_act.setText(self.tr("text_item_error_diagnostics"))
+        self.text_test_example_act.setText(self.tr("text_item_test_example"))
+        self.text_references_act.setText(self.tr("text_item_references"))
+        self.text_source_code_act.setText(self.tr("text_item_source_code"))
+        self.text_coursework_act.setText(self.tr("text_item_coursework"))
 
         self.lang_ru_act.setText(self.tr("lang_ru"))
         self.lang_en_act.setText(self.tr("lang_en"))
@@ -368,6 +380,8 @@ class EditorWindow(QMainWindow):
 
         if getattr(self, "semantic_ast_label", None):
             self.semantic_ast_label.setText(self.tr("semantic_ast_heading"))
+        if getattr(self, "ir_rpn_label", None):
+            self.ir_rpn_label.setText(self.tr("ir_rpn_heading"))
         if getattr(self, "semantic_ast_view_tree_rb", None):
             self.semantic_ast_view_tree_rb.setText(
                 self.tr("semantic_ast_format_tree")
@@ -382,7 +396,8 @@ class EditorWindow(QMainWindow):
             self.output_tabs.setTabText(0, self.tr("output_tab_lexer"))
             self.output_tabs.setTabText(1, self.tr("output_tab_parser"))
             self.output_tabs.setTabText(2, self.tr("output_tab_semantic"))
-            self.output_tabs.setTabText(3, self.tr("output_tab_search"))
+            self.output_tabs.setTabText(3, self.tr("output_tab_ir"))
+            self.output_tabs.setTabText(4, self.tr("output_tab_search"))
 
         self.menuBar().clear()
         self.create_menus()
@@ -494,6 +509,30 @@ class EditorWindow(QMainWindow):
         semantic_layout.addWidget(self._semantic_splitter)
         self.output_tabs.addTab(semantic_tab, "Semantic")
 
+        self.ir_summary_label = QLabel()
+        self.ir_summary_label.setWordWrap(True)
+        self.ir_errors_table = QTableWidget()
+        self._configure_results_table(self.ir_errors_table, 3)
+        self.ir_errors_table.cellClicked.connect(
+            lambda r, c: self.go_to_error_cell(self.ir_errors_table, r, c)
+        )
+        self.ir_quads_table = QTableWidget()
+        self._configure_results_table(self.ir_quads_table, 4)
+        self.ir_rpn_label = QLabel()
+        self.ir_rpn_block = QTextEdit()
+        self.ir_rpn_block.setReadOnly(True)
+        self.ir_rpn_block.setFont(QFont("Consolas", 10))
+        self.ir_rpn_block.setMinimumHeight(72)
+        ir_tab = QWidget()
+        ir_layout = QVBoxLayout(ir_tab)
+        ir_layout.setContentsMargins(4, 4, 4, 4)
+        ir_layout.addWidget(self.ir_summary_label)
+        ir_layout.addWidget(self.ir_errors_table)
+        ir_layout.addWidget(self.ir_quads_table)
+        ir_layout.addWidget(self.ir_rpn_label)
+        ir_layout.addWidget(self.ir_rpn_block)
+        self.output_tabs.addTab(ir_tab, "IR")
+
         self.search_summary_label = QLabel()
         self.search_summary_label.setWordWrap(True)
         self.search_table = QTableWidget()
@@ -504,6 +543,8 @@ class EditorWindow(QMainWindow):
         search_layout.addWidget(self.search_summary_label)
         search_layout.addWidget(self.search_table)
         self.output_tabs.addTab(search_tab, "Search")
+
+        self.output_tabs.setCurrentIndex(1)
 
         self.output_panel = QWidget()
         output_layout = QVBoxLayout(self.output_panel)
@@ -599,6 +640,10 @@ class EditorWindow(QMainWindow):
         self.menu_paste.setShortcut(QKeySequence("Ctrl+V"))
         self.menu_paste.triggered.connect(self.editor.paste)
 
+        self.menu_delete = QAction(self)
+        self.menu_delete.setShortcut(QKeySequence("Del"))
+        self.menu_delete.triggered.connect(self.delete_text)
+
         self.menu_select_all = QAction(self)
         self.menu_select_all.setShortcut(QKeySequence("Ctrl+A"))
         self.menu_select_all.triggered.connect(self.editor.selectAll)
@@ -610,6 +655,29 @@ class EditorWindow(QMainWindow):
         self.menu_search = QAction(self)
         self.menu_search.setShortcut(QKeySequence("Ctrl+F"))
         self.menu_search.triggered.connect(self.open_search_popup)
+
+        self.text_task_act = QAction(self)
+        self.text_grammar_act = QAction(self)
+        self.text_grammar_classification_act = QAction(self)
+        self.text_analysis_method_act = QAction(self)
+        self.text_error_diagnostics_act = QAction(self)
+        self.text_test_example_act = QAction(self)
+        self.text_references_act = QAction(self)
+        self.text_source_code_act = QAction(self)
+        self.text_coursework_act = QAction(self)
+        self.text_task_act.triggered.connect(self.show_text_task)
+        self.text_grammar_act.triggered.connect(self.show_text_grammar)
+        self.text_grammar_classification_act.triggered.connect(
+            self.show_text_grammar_classification
+        )
+        self.text_analysis_method_act.triggered.connect(self.show_text_analysis_method)
+        self.text_error_diagnostics_act.triggered.connect(
+            self.show_text_error_diagnostics
+        )
+        self.text_test_example_act.triggered.connect(self.show_text_test_example)
+        self.text_references_act.triggered.connect(self.show_text_references)
+        self.text_source_code_act.triggered.connect(self.show_text_source_code)
+        self.text_coursework_act.triggered.connect(self.show_text_coursework)
 
         self.lang_ru_act = QAction(self)
         self.lang_ru_act.setCheckable(True)
@@ -671,6 +739,16 @@ class EditorWindow(QMainWindow):
         self.tb_about.setIcon(QIcon(resource_path("icons/about.svg")))
         self.tb_about.triggered.connect(self.show_about)
 
+        self.zoom_in_act = QAction(self)
+        self.zoom_in_act.setShortcut(QKeySequence("Ctrl+="))
+        self.zoom_in_act.triggered.connect(self.increase_font_size)
+        self.addAction(self.zoom_in_act)
+
+        self.zoom_out_act = QAction(self)
+        self.zoom_out_act.setShortcut(QKeySequence("Ctrl+-"))
+        self.zoom_out_act.triggered.connect(self.decrease_font_size)
+        self.addAction(self.zoom_out_act)
+
     def create_menus(self):
         mb = self.menuBar()
 
@@ -689,6 +767,7 @@ class EditorWindow(QMainWindow):
         edit_menu.addAction(self.menu_cut)
         edit_menu.addAction(self.menu_copy)
         edit_menu.addAction(self.menu_paste)
+        edit_menu.addAction(self.menu_delete)
         edit_menu.addSeparator()
         edit_menu.addAction(self.menu_select_all)
         edit_menu.addSeparator()
@@ -696,6 +775,17 @@ class EditorWindow(QMainWindow):
 
         run_menu = mb.addMenu(self.tr("run"))
         run_menu.addAction(self.menu_run)
+
+        self.text_menu = mb.addMenu(self.tr("text"))
+        self.text_menu.addAction(self.text_task_act)
+        self.text_menu.addAction(self.text_grammar_act)
+        self.text_menu.addAction(self.text_grammar_classification_act)
+        self.text_menu.addAction(self.text_analysis_method_act)
+        self.text_menu.addAction(self.text_error_diagnostics_act)
+        self.text_menu.addAction(self.text_test_example_act)
+        self.text_menu.addAction(self.text_references_act)
+        self.text_menu.addAction(self.text_source_code_act)
+        self.text_menu.addAction(self.text_coursework_act)
 
         lang_menu = mb.addMenu(self.tr("language"))
         lang_menu.addAction(self.lang_ru_act)
@@ -790,6 +880,58 @@ class EditorWindow(QMainWindow):
         
         self.status_label.setText(f"{line_str} {line} | {col_str} {column}")
 
+    def delete_text(self):
+        cursor = self.editor.textCursor()
+        cursor.deleteChar()
+
+    def increase_font_size(self):
+        self.change_editor_font_size(1)
+
+    def decrease_font_size(self):
+        self.change_editor_font_size(-1)
+
+    def change_editor_font_size(self, delta):
+        widgets = [
+            self,
+            self.menuBar(),
+            self.status_label,
+            self.editor,
+            self.output_tabs,
+            self.lexer_summary_label,
+            self.parser_summary_label,
+            self.search_summary_label,
+            self.ir_summary_label,
+            self.lexer_table,
+            self.parser_table,
+            self.semantic_table,
+            self.ir_errors_table,
+            self.ir_quads_table,
+            self.ir_rpn_label,
+            self.ir_rpn_block,
+            self.search_table,
+            self.semantic_ast,
+        ]
+        changed = False
+        for widget in widgets:
+            if widget is None:
+                continue
+            font = widget.font()
+            current_size = font.pointSize()
+            if current_size <= 0:
+                continue
+            new_size = max(8, min(40, current_size + delta))
+            if new_size == current_size:
+                continue
+            font.setPointSize(new_size)
+            widget.setFont(font)
+            changed = True
+        if not changed:
+            return
+        self.editor.update_line_number_area_width()
+        self.editor.setTabStopDistance(
+            4 * self.editor.fontMetrics().horizontalAdvance(" ")
+        )
+
     def maybe_save(self) -> bool:
         if not self.is_dirty:
             return True
@@ -883,13 +1025,10 @@ class EditorWindow(QMainWindow):
 
     def get_detailed_help(self):
         sections = [
-            ("help_section_features", "help_features"),
             ("help_section_hotkeys", "help_hotkeys"),
             ("help_section_analysis", "help_analysis"),
             ("help_section_i18n", "help_i18n"),
-            ("help_section_interface", "help_interface"),
             ("help_section_additional", "help_additional"),
-            ("help_section_technical", "help_technical")
         ]
         
         help_parts = [f"<b>{self.tr('app_title')}</b><br><br>"]
@@ -903,6 +1042,118 @@ class EditorWindow(QMainWindow):
 
     def show_about(self):
         QMessageBox.about(self, self.tr("about_title"), self.tr("about_text"))
+
+    def show_text_dialog(self, title, html):
+        dlg = QDialog(self)
+        dlg.setWindowTitle(title)
+        dlg.resize(760, 560)
+        layout = QVBoxLayout(dlg)
+        browser = QTextBrowser(dlg)
+        browser.setReadOnly(True)
+        browser.setOpenExternalLinks(True)
+        browser.setHtml(html)
+        layout.addWidget(browser)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        buttons.accepted.connect(dlg.accept)
+        layout.addWidget(buttons)
+        dlg.exec()
+
+    def show_text_task(self):
+        html = (
+            "<b>Постановка задачи</b><br><br>"
+            "Разработать пользовательский интерфейс (GUI) для языкового процессора.<br><br>"
+            "Требуется реализовать:<br>"
+            "• Текстовый редактор с нумерацией строк<br>"
+            "• Лексический анализатор<br>"
+            "• Синтаксический анализатор<br>"
+            "• Вывод токенов и ошибок<br>"
+            "• Поддержку русского и английского языка"
+        )
+        self.show_text_dialog(self.text_task_act.text(), html)
+
+    def show_text_grammar(self):
+        html = """
+<b>Грамматика</b><br><br>
+<pre>
+G[&lt;START&gt;]:
+1) &lt;START&gt; -&gt; "repeat" { &lt;STMT_LIST&gt; } "while" &lt;CONDITION&gt; ;
+2) &lt;STMT_LIST&gt; -&gt; &lt;STMT&gt; | &lt;STMT&gt; &lt;STMT_LIST&gt;
+3) &lt;STMT&gt; -&gt; &lt;ID&gt; &lt;ASSIGN_OP&gt; &lt;EXPR&gt; ;
+4) &lt;ASSIGN_OP&gt; -&gt; "=" | "+=" | "-=" | "*=" | "/="
+5) &lt;CONDITION&gt; -&gt; &lt;EXPR&gt; &lt;REL_OP&gt; &lt;EXPR&gt; | &lt;CONDITION&gt; &lt;LOGIC_OP&gt; &lt;CONDITION&gt;
+6) &lt;REL_OP&gt; -&gt; "==" | "!=" | "&lt;" | "&gt;" | "&lt;=" | "&gt;="
+7) &lt;LOGIC_OP&gt; -&gt; "and" | "or"
+8) &lt;EXPR&gt; -&gt; &lt;ID&gt; | &lt;NUMBER&gt; | ( &lt;EXPR&gt; &lt;ARITH_OP&gt; &lt;EXPR&gt; )
+9) &lt;ARITH_OP&gt; -&gt; "+" | "-" | "*" | "/"
+10) &lt;ID&gt; -&gt; letter | letter &lt;ID&gt; | letter &lt;NUMBER&gt;
+11) &lt;NUMBER&gt; -&gt; digit | digit &lt;NUMBER&gt;
+
+Z = &lt;START&gt;
+VT = {a, b, …, z, A, B, …, Z, 0, 1, …, 9, ;, {, }, +, -, *, /, =, &, &gt;, &lt;, !, repeat, while, or, and}
+VN = {&lt;START&gt;, &lt;STMT_LIST&gt;, &lt;CONDITION&gt;, &lt;STMT&gt;, &lt;ID&gt;, &lt;ASSIGN_OP&gt;, &lt;EXPR&gt;, &lt;REL_OP&gt;, &lt;LOGIC_OP&gt;, &lt;NUMBER&gt;, &lt;ARITH_OP&gt;}
+</pre>
+"""
+        self.show_text_dialog(self.text_grammar_act.text(), html)
+
+    def show_text_grammar_classification(self):
+        html = (
+            "<b>Классификация грамматики</b><br><br>"
+            "Грамматика относится к классу контекстно-свободных грамматик."
+        )
+        self.show_text_dialog(self.text_grammar_classification_act.text(), html)
+
+    def show_text_analysis_method(self):
+        html = (
+            "<b>Методология анализа</b><br><br>"
+            "• Лексический анализ - на основе регулярных выражений и ручного разбора<br>"
+            "• Синтаксический анализ - метод рекурсивного спуска"
+        )
+        self.show_text_dialog(self.text_analysis_method_act.text(), html)
+
+    def show_text_error_diagnostics(self):
+        html = (
+            "<b>Диагностика и нейтрализация ошибок</b><br><br>"
+            "Используется метод Айронса (Irons) для диагностики и восстановления разбора: "
+            "вставка, удаление, замена и синхронизация токенов. "
+            "Это уменьшает каскадные ошибки и позволяет доводить анализ до конца конструкции."
+        )
+        self.show_text_dialog(self.text_error_diagnostics_act.text(), html)
+
+    def show_text_test_example(self):
+        html = (
+            "<b>Тестовый пример</b><br><br>"
+            "<pre>repeat {\n"
+            "    number += 1\n"
+            "} while number &lt; 5;</pre>"
+        )
+        self.show_text_dialog(self.text_test_example_act.text(), html)
+
+    def show_text_references(self):
+        html = """
+<b>Список литературы</b><br><br>
+1. Шорников Ю.В. Теория и практика языковых процессоров: учеб. пособие / Ю.В. Шорников. – Новосибирск: Изд-во НГТУ, 2022.<br><br>
+2. Хантер Р. Проектирование и конструирование компиляторов / Р. Хантер. – Москва : Мир, 1984. – 232 с.<br><br>
+3. Теория формальных языков и компиляторов [Электронный ресурс] / Электрон. дан. URL:
+<a href="https://dispace.edu.nstu.ru/didesk/course/show/8594">https://dispace.edu.nstu.ru/didesk/course/show/8594</a>,
+свободный. Яз. рус. (дата обращения 13.04.2026).
+"""
+        self.show_text_dialog(self.text_references_act.text(), html)
+
+    def show_text_source_code(self):
+        html = (
+            "<b>Исходный код программы</b><br><br>"
+            '<a href="https://github.com/igor231223/Formal-Languages-and-Compilers/tree/kurs">'
+            "https://github.com/igor231223/Formal-Languages-and-Compilers/tree/kurs"
+            "</a>"
+        )
+        self.show_text_dialog(self.text_source_code_act.text(), html)
+
+    def show_text_coursework(self):
+        if "https://docs.google.com/document/d/1wxAo7OC5JSjKJj0BrCxaDFwG4C4ohbCD/edit?usp=sharing&ouid=107816324771143445026&rtpof=true&sd=true".strip():
+            webbrowser.open("https://docs.google.com/document/d/1wxAo7OC5JSjKJj0BrCxaDFwG4C4ohbCD/edit?usp=sharing&ouid=107816324771143445026&rtpof=true&sd=true".strip())
+            return
+        html = "<b>Курсовая</b><br><br>Ссылка на документ курсовой работы."
+        self.show_text_dialog(self.text_coursework_act.text(), html)
 
     def _refresh_output_tabs_headers(self):
         self.lexer_table.setHorizontalHeaderLabels([
@@ -921,51 +1172,23 @@ class EditorWindow(QMainWindow):
             self.tr("table_err_location"),
             self.tr("table_err_desc"),
         ])
+        self.ir_errors_table.setHorizontalHeaderLabels([
+            self.tr("table_err_fragment"),
+            self.tr("table_err_location"),
+            self.tr("table_err_desc"),
+        ])
+        self.ir_quads_table.setHorizontalHeaderLabels([
+            self.tr("table_quad_op"),
+            self.tr("table_quad_arg1"),
+            self.tr("table_quad_arg2"),
+            self.tr("table_quad_result"),
+        ])
+        self.ir_rpn_label.setText(self.tr("ir_rpn_heading"))
         self.search_table.setHorizontalHeaderLabels([
             self.tr("table_search_fragment"),
             self.tr("table_search_position"),
             self.tr("table_search_length"),
         ])
-
-    def go_to_error_cell(self, table, row, column):
-        item0 = table.item(row, 0)
-        if not item0:
-            return
-        data = item0.data(Qt.ItemDataRole.UserRole)
-        if not data:
-            return
-        if isinstance(data, dict) and data.get("type") == "abs":
-            try:
-                start = int(data["start"])
-                end = int(data["end"])
-            except (KeyError, TypeError, ValueError):
-                return
-            cursor = self.editor.textCursor()
-            cursor.setPosition(start)
-            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
-            self.editor.setTextCursor(cursor)
-            self.editor.setFocus()
-            return
-
-        line_num, pos_start, pos_end = data
-        try:
-            line_num = int(line_num)
-            pos_start = int(pos_start)
-            pos_end = int(pos_end)
-        except (TypeError, ValueError):
-            return
-
-        cursor = self.editor.textCursor()
-        cursor.movePosition(cursor.MoveOperation.Start)
-        cursor.movePosition(cursor.MoveOperation.Down, n=line_num - 1)
-        cursor.movePosition(cursor.MoveOperation.Right, n=pos_start - 1)
-        cursor.movePosition(
-            cursor.MoveOperation.Right,
-            cursor.MoveMode.KeepAnchor,
-            pos_end - pos_start + 1,
-        )
-        self.editor.setTextCursor(cursor)
-        self.editor.setFocus()
 
     def open_search_popup(self):
         if self._search_popup is None:
@@ -992,7 +1215,7 @@ class EditorWindow(QMainWindow):
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.search_table.setItem(0, 0, item)
             self.search_table.setSpan(0, 0, 1, 3)
-            self.output_tabs.setCurrentIndex(3)
+            self.output_tabs.setCurrentIndex(4)
             return
 
         if literal:
@@ -1026,7 +1249,7 @@ class EditorWindow(QMainWindow):
             self.search_table.setSpan(0, 0, 1, 3)
             self.search_table.resizeColumnsToContents()
             self.search_table.horizontalHeader().setStretchLastSection(True)
-            self.output_tabs.setCurrentIndex(3)
+            self.output_tabs.setCurrentIndex(4)
             return
 
         self.search_table.setRowCount(n)
@@ -1047,7 +1270,49 @@ class EditorWindow(QMainWindow):
         self.search_table.resizeColumnsToContents()
         self.search_table.horizontalHeader().setStretchLastSection(True)
         self._apply_editor_search_highlights(matches)
-        self.output_tabs.setCurrentIndex(3)
+        self.output_tabs.setCurrentIndex(4)
+
+    def go_to_error_cell(self, table, row, column):
+        item0 = table.item(row, 0)
+        if not item0:
+            return
+        data = item0.data(Qt.ItemDataRole.UserRole)
+        if not data:
+            return
+        if isinstance(data, dict) and data.get("type") == "abs":
+            try:
+                start = int(data["start"])
+                end = int(data["end"])
+            except (KeyError, TypeError, ValueError):
+                return
+            cursor = self.editor.textCursor()
+            cursor.setPosition(start)
+            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+            self.editor.setTextCursor(cursor)
+            self.editor.setFocus()
+            return
+
+        line_num, pos_start, pos_end = data
+        try:
+            line_num = int(line_num)
+            pos_start = int(pos_start)
+            pos_end = int(pos_end)
+        except (TypeError, ValueError):
+            return
+
+        cursor = self.editor.textCursor()
+        cursor.movePosition(cursor.MoveOperation.Start)
+        cursor.movePosition(cursor.MoveOperation.Down, n=line_num - 1)
+        cursor.movePosition(cursor.MoveOperation.Right, n=pos_start - 1)
+        fragment_text = item0.text() if item0 is not None else ""
+        if fragment_text:
+            cursor.movePosition(
+                cursor.MoveOperation.Right,
+                cursor.MoveMode.KeepAnchor,
+                max(0, pos_end - pos_start + 1),
+            )
+        self.editor.setTextCursor(cursor)
+        self.editor.setFocus()
 
     def run_analysis(self):
         self._clear_editor_search_highlights()
@@ -1062,6 +1327,12 @@ class EditorWindow(QMainWindow):
         self.semantic_ast_label.setText("")
         self.semantic_table.clearSpans()
         self.semantic_table.setRowCount(0)
+        self.ir_errors_table.clearSpans()
+        self.ir_errors_table.setRowCount(0)
+        self.ir_quads_table.clearSpans()
+        self.ir_quads_table.setRowCount(0)
+        self.ir_summary_label.setText("")
+        self.ir_rpn_block.setPlainText("")
         text = self.editor.toPlainText()
 
         if not text.strip():
@@ -1092,6 +1363,18 @@ class EditorWindow(QMainWindow):
             self._refresh_semantic_ast_display()
             self.lexer_summary_label.setText(self.tr("lexer_token_count").format(0))
             self.parser_summary_label.setText(self.tr("analysis_error_count").format(0))
+            self.ir_errors_table.setColumnCount(3)
+            self.ir_errors_table.setRowCount(1)
+            iri = QTableWidgetItem(self.tr("analysis_empty"))
+            iri.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.ir_errors_table.setItem(0, 0, iri)
+            self.ir_errors_table.setSpan(0, 0, 1, 3)
+            self.ir_quads_table.setColumnCount(4)
+            self.ir_quads_table.setRowCount(1)
+            irq = QTableWidgetItem(self.tr("analysis_empty"))
+            irq.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.ir_quads_table.setItem(0, 0, irq)
+            self.ir_quads_table.setSpan(0, 0, 1, 4)
             return
 
         scanner = Scanner(text)
@@ -1102,6 +1385,7 @@ class EditorWindow(QMainWindow):
         self._fill_lexer_table(tokens)
         self._fill_parser_table(result)
         self._fill_semantic_panel(sem)
+        self._fill_ir_panel(tokens)
 
         self.lexer_table.resizeColumnsToContents()
         self.lexer_table.horizontalHeader().setStretchLastSection(True)
@@ -1109,6 +1393,87 @@ class EditorWindow(QMainWindow):
         self.parser_table.horizontalHeader().setStretchLastSection(True)
         self.semantic_table.resizeColumnsToContents()
         self.semantic_table.horizontalHeader().setStretchLastSection(True)
+        self.ir_errors_table.resizeColumnsToContents()
+        self.ir_errors_table.horizontalHeader().setStretchLastSection(True)
+        self.ir_quads_table.resizeColumnsToContents()
+        self.ir_quads_table.horizontalHeader().setStretchLastSection(True)
+
+    def _fill_ir_panel(self, tokens):
+        self.ir_errors_table.clearSpans()
+        self.ir_quads_table.clearSpans()
+        ir = analyze_arith_expression(tokens)
+        err_bg = QColor(255, 0, 0)
+        if not ir.ok:
+            self.ir_summary_label.setText(
+                self.tr("ir_summary_errors").format(len(ir.errors))
+            )
+            self.ir_errors_table.setColumnCount(3)
+            self.ir_errors_table.setRowCount(len(ir.errors))
+            for i, err in enumerate(ir.errors):
+                fragment = QTableWidgetItem(err.fragment)
+                location = QTableWidgetItem(
+                    f"{self.tr('status_line')} {err.line}, "
+                    f"{self.tr('err_position')} {err.start_pos}-{err.end_pos}"
+                )
+                description = QTableWidgetItem(err.message)
+                pos_data = (err.line, err.start_pos, err.end_pos)
+                fragment.setData(Qt.ItemDataRole.UserRole, pos_data)
+                for item in (fragment, location, description):
+                    item.setBackground(err_bg)
+                self.ir_errors_table.setItem(i, 0, fragment)
+                self.ir_errors_table.setItem(i, 1, location)
+                self.ir_errors_table.setItem(i, 2, description)
+            self.ir_quads_table.setColumnCount(4)
+            self.ir_quads_table.setRowCount(1)
+            skip = QTableWidgetItem(self.tr("ir_quads_skipped"))
+            skip.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.ir_quads_table.setItem(0, 0, skip)
+            self.ir_quads_table.setSpan(0, 0, 1, 4)
+            self.ir_rpn_block.setPlainText(self.tr("ir_rpn_skipped_errors"))
+            return
+
+        self.ir_summary_label.setText(self.tr("ir_summary_ok"))
+        self.ir_errors_table.setColumnCount(3)
+        self.ir_errors_table.setRowCount(1)
+        ok_row = QTableWidgetItem(self.tr("ir_no_expr_errors"))
+        ok_row.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ir_errors_table.setItem(0, 0, ok_row)
+        self.ir_errors_table.setSpan(0, 0, 1, 3)
+
+        self.ir_quads_table.setColumnCount(4)
+        nq = len(ir.quadruples)
+        if nq == 0:
+            self.ir_quads_table.setRowCount(1)
+            lone = QTableWidgetItem(self.tr("ir_quads_none"))
+            lone.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.ir_quads_table.setItem(0, 0, lone)
+            self.ir_quads_table.setSpan(0, 0, 1, 4)
+        else:
+            self.ir_quads_table.setRowCount(nq)
+            for i, row in enumerate(ir.quadruples):
+                op, a1, a2, res = row
+                self.ir_quads_table.setItem(i, 0, QTableWidgetItem(op))
+                self.ir_quads_table.setItem(i, 1, QTableWidgetItem(a1))
+                self.ir_quads_table.setItem(i, 2, QTableWidgetItem(a2))
+                self.ir_quads_table.setItem(i, 3, QTableWidgetItem(res))
+
+        if ir.integers_only:
+            if ir.rpn_value is not None and ir.rpn_string:
+                self.ir_rpn_block.setPlainText(
+                    self.tr("ir_rpn_result").format(ir.rpn_string, ir.rpn_value)
+                )
+            elif ir.rpn_message:
+                self.ir_rpn_block.setPlainText(
+                    self.tr("ir_rpn_partial").format(ir.rpn_message)
+                )
+            elif ir.rpn_string:
+                self.ir_rpn_block.setPlainText(
+                    self.tr("ir_rpn_result").format(ir.rpn_string, "")
+                )
+            else:
+                self.ir_rpn_block.setPlainText("")
+        else:
+            self.ir_rpn_block.setPlainText(ir.rpn_message)
 
     def _fill_lexer_table(self, tokens):
         self.lexer_table.clearSpans()
