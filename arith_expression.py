@@ -1,17 +1,3 @@
-"""
-Рекурсивный спуск для арифметических выражений (лаб. 6, стиль Swift):
-  E → TA
-  A → ε | + TA | - TA
-  T → FB
-  B → ε | * FB | / FB | % FB
-  F → num | id | (E)
-
-Тетрады (op, arg1, arg2, result) с временными t1, t2, … генерируются при разборе.
-
-ПОЛИЗ — алгоритм Дейкстры (стек операций); вычисление — только если в выражении
-нет идентификаторов (только целые литералы), иначе сообщение-предупреждение.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -309,10 +295,6 @@ class _RecursiveDescentExprParser:
 
 
 def analyze_arith_expression(tokens) -> ExprIrResult:
-    """
-    Полный поток токенов сканера: пробелы/переносы игнорируются в грамматике;
-    любые другие «чужие» лексемы или ERROR блокируют тетрады и ПОЛИЗ.
-    """
     pre = _collect_preparse_errors(tokens)
     if pre:
         return ExprIrResult(ok=False, errors=pre)
@@ -352,7 +334,6 @@ def analyze_arith_expression(tokens) -> ExprIrResult:
     else:
         rpn_msg = (
             "ПОЛИЗ и численное значение не строятся: в выражении есть идентификаторы "
-            "(по заданию — только цепочки из целых чисел)."
         )
 
     return ExprIrResult(
