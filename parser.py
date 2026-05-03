@@ -290,20 +290,31 @@ class IronsParser:
         self.current_stmt_start_token = None
         self.suffix_anchor_token = None
         self._virtual_open_brace = False
+        self._open_brace_after_double_lbrace_lexer_error = False
         self._suppress_rbrace_expect_after_stray_lbrace = False
 
     def parse(self):
         self.skip_nl()
         if not self.try_consume_keyword_split_by_semicolon(CODE_REPEAT):
-            self.expect(CODE_REPEAT, "Ожидалось ключевое слово repeat", self.PROGRAM_FOLLOW)
+            if not self.try_consume_keyword_from_two_identifiers(CODE_REPEAT):
+                self.expect(CODE_REPEAT, "Ожидалось ключевое слово repeat", self.PROGRAM_FOLLOW)
         self.skip_nl()
         self.consume_extra_keywords({CODE_REPEAT, CODE_WHILE})
         paired_body_close, error_body_close = self.wrong_body_closer_for(self.peek())
         self.consume_identifier_junk_before_open_brace()
+        self._consume_extra_rbrace_before_opening_body_brace()
         opened = self.expect(CODE_LBRACE, "Ожидался символ '{'", self.BODY_FOLLOW)
         if self._virtual_open_brace:
             opened = True
             self._virtual_open_brace = False
+        elif self._open_brace_after_double_lbrace_lexer_error:
+            opened = True
+            self._open_brace_after_double_lbrace_lexer_error = False
+            self.skip_nl()
+            if self.peek() and self.peek().code == CODE_RBRACE:
+                self.add_extra_symbol_error(self.peek())
+                self.advance()
+                self.skip_nl()
         self.suffix_anchor_token = None
         if (
             opened
@@ -322,10 +333,13 @@ class IronsParser:
         elif not (not opened and self.peek() and self.peek().code == CODE_RBRACE):
             self.expect(CODE_RBRACE, "Ожидался символ '}'", {CODE_WHILE, CODE_SEMICOLON})
         self.skip_nl()
+        self.consume_illegal_semicolon_between_rbrace_and_while()
         if self.eof():
             self.add_missing_suffix_errors(0)
             return ParseResult(not self.errors and self.eof(), list(self.errors))
         if self.try_consume_keyword_split_by_semicolon(CODE_WHILE):
+            has_while = True
+        elif self.try_consume_keyword_from_two_identifiers(CODE_WHILE):
             has_while = True
         else:
             has_while = self.expect(CODE_WHILE, "Ожидалось ключевое слово while", self.CONDITION_FOLLOW)
@@ -540,6 +554,19 @@ class IronsParser:
         self.skip_nl()
         return True
 
+    def consume_illegal_semicolon_between_rbrace_and_while(self):
+        self.skip_nl()
+        tok = self.peek()
+        if not tok or tok.code != CODE_SEMICOLON:
+            return False
+        nxt_i = self._next_non_nl_index(self.pos + 1)
+        if nxt_i is None or self.tokens[nxt_i].code != CODE_WHILE:
+            return False
+        self.add_extra_symbol_error(tok)
+        self.advance()
+        self.skip_nl()
+        return True
+
     def consume_extra_semicolon_before_more_input(self):
         tok = self.peek()
         if not tok or tok.code != CODE_SEMICOLON:
@@ -621,7 +648,6 @@ class IronsParser:
         commit_on_failure=False,
         commit_on_blocking=False,
     ):
-        """Skip lexical noise only when it leads to a real expected token."""
         expected_codes = set(expected_codes)
         i = self.pos
         skipped = []
@@ -706,6 +732,14 @@ class IronsParser:
             self.advance()
             self._virtual_open_brace = True
             return False
+        if code == CODE_LBRACE and tok and tok.code == CODE_ERROR and self._is_repeated_symbol_error(tok, "{"):
+            self.add_err(
+                f"Ожидался символ '{{'. Получена последовательность '{tok.lexeme}'.",
+                tok,
+            )
+            self.advance()
+            self._open_brace_after_double_lbrace_lexer_error = True
+            return False
         if code == CODE_REPEAT and tok:
             if tok.code in (CODE_IDENTIFIER, CODE_ERROR) and tok.lexeme and tok.lexeme[0].lower() == "r":
                 self.emit_recovery_error(RECOVERY_REPLACE, msg, tok)
@@ -716,7 +750,7 @@ class IronsParser:
                     self.emit_recovery_error(RECOVERY_REPLACE, msg, tok)
                 self.advance()
                 return True
-            if tok.code == CODE_LBRACE or self._is_repeated_symbol_error(tok, "{"):
+            if tok.code == CODE_LBRACE:
                 self.emit_recovery_error(RECOVERY_INSERT, msg, tok)
                 return False
             if self.is_statement_start(tok):
@@ -952,14 +986,34 @@ class IronsParser:
         if self.is_while_boundary_token():
             return
         if self.is_body_end_token(self.peek(), end_codes, error_end_lexeme):
-            self.emit_recovery_error(RECOVERY_INSERT, "Ожидался оператор в теле цикла", self.peek())
-            return
+            tok = self.peek()
+            handled = False
+            if tok and tok.code == CODE_RBRACE:
+                nxt_i = self._next_non_nl_index(self.pos + 1)
+                if nxt_i is not None and self.tokens[nxt_i].code != CODE_WHILE:
+                    close_idx = self._find_body_rbrace_before_while(self.pos + 1)
+                    if (
+                        close_idx is not None
+                        and close_idx > self.pos
+                        and self._has_substance_between(self.pos, close_idx)
+                    ):
+                        self.add_extra_symbol_error(tok)
+                        self.advance()
+                        self.skip_nl()
+                        handled = True
+            if not handled:
+                self.emit_recovery_error(RECOVERY_INSERT, "Ожидался оператор в теле цикла", self.peek())
+                return
 
         while self.peek() and not self.is_body_end_token(self.peek(), end_codes, error_end_lexeme):
             if self.is_while_boundary_token():
                 return
             if self._consume_stray_open_braces_run_before_while():
                 return
+            if self._consume_wrong_lbrace_semicolon_while_instead_of_rbrace():
+                return
+            if self._consume_stray_open_brace_before_rbrace_semicolon_while():
+                continue
             if self.is_condition_like_sequence(self.pos):
                 return
             if self.consume_extra_semicolon():
@@ -1050,8 +1104,15 @@ class IronsParser:
         if id2_i is None or self.tokens[id2_i].code != CODE_IDENTIFIER:
             return False
         b = self.tokens[id2_i]
-        if ((tok.lexeme or "") + (b.lexeme or "")).lower() != name:
-            return False
+        cat = ((tok.lexeme or "") + (b.lexeme or "")).lower()
+        if cat != name:
+            if not (
+                code == CODE_WHILE
+                and name == "while"
+                and (tok.lexeme or "").lower() == "whi"
+                and _levenshtein(cat, "while") <= 1
+            ):
+                return False
         msg = self._KEYWORD_SEMICOLON_EXPECT_MSG.get(code)
         if not msg:
             return False
@@ -1065,6 +1126,44 @@ class IronsParser:
                 msg,
             )
         )
+        self.pos = id2_i + 1
+        self.skip_nl()
+        return True
+
+    def try_consume_keyword_from_two_identifiers(self, code):
+        name = {CODE_REPEAT: "repeat", CODE_WHILE: "while"}.get(code)
+        if not name:
+            return False
+        a = self.peek()
+        if not (a and a.code == CODE_IDENTIFIER):
+            return False
+        id2_i = self._next_non_nl_index(self.pos + 1)
+        if id2_i is None:
+            return False
+        for i in range(self.pos + 1, id2_i):
+            if self.tokens[i].code != CODE_NEWLINE:
+                return False
+        b = self.tokens[id2_i]
+        if b.code != CODE_IDENTIFIER:
+            return False
+        cat = ((a.lexeme or "") + (b.lexeme or "")).lower()
+        if cat != name:
+            return False
+        if len(a.lexeme or "") + len(b.lexeme or "") != len(name):
+            return False
+        msg = self._KEYWORD_SEMICOLON_EXPECT_MSG.get(code)
+        if not msg:
+            return False
+        self.errors.append(
+            ParseError(
+                a.lexeme or "",
+                a.line,
+                a.start_pos,
+                a.end_pos,
+                msg,
+            )
+        )
+        self.add_err(f"Лишний токен '{b.lexeme}'", b)
         self.pos = id2_i + 1
         self.skip_nl()
         return True
@@ -1096,6 +1195,27 @@ class IronsParser:
         while i < len(self.tokens) and self.tokens[i].code == CODE_NEWLINE:
             i += 1
         return i if i < len(self.tokens) else None
+
+    def _find_body_rbrace_before_while(self, search_from):
+        for i in range(search_from, len(self.tokens)):
+            if self.tokens[i].code != CODE_RBRACE:
+                continue
+            j = self._next_non_nl_index(i + 1)
+            if j is None:
+                continue
+            if self.tokens[j].code == CODE_WHILE:
+                return i
+            if self.tokens[j].code == CODE_SEMICOLON:
+                k = self._next_non_nl_index(j + 1)
+                if k is not None and self.tokens[k].code == CODE_WHILE:
+                    return i
+        return None
+
+    def _has_substance_between(self, lo, hi):
+        for i in range(lo + 1, hi):
+            if self.tokens[i].code != CODE_NEWLINE:
+                return True
+        return False
 
     def looks_like_assignment_stmt_after_noise(self, start):
         i = self._next_non_nl_index(start)
@@ -1390,6 +1510,47 @@ class IronsParser:
         self._suppress_rbrace_expect_after_stray_lbrace = True
         return True
 
+    def _consume_wrong_lbrace_semicolon_while_instead_of_rbrace(self):
+        tok = self.peek()
+        if not tok or tok.code != CODE_LBRACE:
+            return False
+        k = self._next_non_nl_index(self.pos + 1)
+        if k is None or self.tokens[k].code != CODE_SEMICOLON:
+            return False
+        w = self._next_non_nl_index(k + 1)
+        if w is None or self.tokens[w].code != CODE_WHILE:
+            return False
+        self.add_err("Ожидался символ '}'", tok)
+        self.pos = w
+        self.skip_nl()
+        self._suppress_rbrace_expect_after_stray_lbrace = True
+        return True
+
+    def _consume_stray_open_brace_before_rbrace_semicolon_while(self):
+        tok = self.peek()
+        if not tok or tok.code != CODE_LBRACE:
+            return False
+        j = self._next_non_nl_index(self.pos + 1)
+        if j is None or self.tokens[j].code != CODE_RBRACE:
+            return False
+        w = self._next_non_nl_index(j + 1)
+        if w is None:
+            return False
+        if self.tokens[w].code == CODE_WHILE:
+            self.add_extra_symbol_error(tok)
+            self.advance()
+            self.skip_nl()
+            return True
+        if self.tokens[w].code != CODE_SEMICOLON:
+            return False
+        w2 = self._next_non_nl_index(w + 1)
+        if w2 is None or self.tokens[w2].code != CODE_WHILE:
+            return False
+        self.add_extra_symbol_error(tok)
+        self.advance()
+        self.skip_nl()
+        return True
+
     def _skip_noise_before_condition_operator(self, start):
         i = self._skip_newlines_index(start)
         while (
@@ -1644,6 +1805,7 @@ class IronsParser:
             self.add_err(
                 f"Ожидается логический оператор (and, or) или конец условия перед '{tok.lexeme}'",
                 tok,
+                fragment="" if tok and tok.code == CODE_IDENTIFIER else None,
             )
             self.sync_to_follow("CONDITION")
 
@@ -1974,11 +2136,34 @@ class IronsParser:
         if junk_tail is not None:
             self.suffix_anchor_token = junk_tail
 
+    def _consume_extra_rbrace_before_opening_body_brace(self):
+        tok = self.peek()
+        if not tok or tok.code != CODE_RBRACE:
+            return
+        nxt = self._next_non_nl_index(self.pos + 1)
+        if nxt is None or self.tokens[nxt].code != CODE_LBRACE:
+            return
+        self.add_extra_symbol_error(tok)
+        self.advance()
+        self.skip_nl()
+
     def parse_rel_op_slot(self, left_was_bad_token=False):
         self.skip_nl()
         while self.consume_extra_semicolon_before_more_input():
             pass
         op = self.peek()
+        if op and op.code == CODE_ERROR and op.lexeme == "@":
+            self.add_err(f"Недопустимая лексема '@' (лексическая ошибка)", op)
+            self.advance()
+            self.skip_nl()
+            op2 = self.peek()
+            if op2 and op2.code == CODE_DIGIT:
+                nxi = self._next_non_nl_index(self.pos + 1)
+                if nxi is not None and self.tokens[nxi].code == CODE_COMPARE:
+                    self.add_extra_symbol_error(op2)
+                    self.advance()
+                    self.skip_nl()
+            return self.parse_rel_op_slot(left_was_bad_token)
         if op and op.code == CODE_ERROR:
             self.recover_to_first(
                 "REL_OP",
