@@ -273,6 +273,15 @@ class IronsParser:
     STMT_FOLLOW = follow("STMT")
     CONDITION_FOLLOW = follow("CONDITION")
 
+    _KEYWORD_JOINED_LOWER = frozenset({"repeat", "while", "and", "or", "not"})
+    _KEYWORD_SEMICOLON_EXPECT_MSG = {
+        CODE_REPEAT: "Ожидалось ключевое слово repeat",
+        CODE_WHILE: "Ожидалось ключевое слово while",
+        CODE_AND: "Ожидалось ключевое слово and",
+        CODE_OR: "Ожидалось ключевое слово or",
+        CODE_NOT: "Ожидалось ключевое слово not",
+    }
+
     def __init__(self, tokens):
         self.tokens = list(tokens)
         self.pos = 0
@@ -280,14 +289,22 @@ class IronsParser:
         self.condition_progress = 0
         self.current_stmt_start_token = None
         self.suffix_anchor_token = None
+        self._virtual_open_brace = False
+        self._suppress_rbrace_expect_after_stray_lbrace = False
 
     def parse(self):
         self.skip_nl()
-        self.expect(CODE_REPEAT, "Ожидалось ключевое слово repeat", self.PROGRAM_FOLLOW)
+        if not self.try_consume_keyword_split_by_semicolon(CODE_REPEAT):
+            self.expect(CODE_REPEAT, "Ожидалось ключевое слово repeat", self.PROGRAM_FOLLOW)
         self.skip_nl()
         self.consume_extra_keywords({CODE_REPEAT, CODE_WHILE})
         paired_body_close, error_body_close = self.wrong_body_closer_for(self.peek())
+        self.consume_identifier_junk_before_open_brace()
         opened = self.expect(CODE_LBRACE, "Ожидался символ '{'", self.BODY_FOLLOW)
+        if self._virtual_open_brace:
+            opened = True
+            self._virtual_open_brace = False
+        self.suffix_anchor_token = None
         if (
             opened
             and self.peek()
@@ -300,13 +317,18 @@ class IronsParser:
             body_end.add(paired_body_close)
         self.parse_body(body_end, error_body_close)
         self.skip_nl()
-        if not (not opened and self.peek() and self.peek().code == CODE_RBRACE):
+        if self._suppress_rbrace_expect_after_stray_lbrace:
+            self._suppress_rbrace_expect_after_stray_lbrace = False
+        elif not (not opened and self.peek() and self.peek().code == CODE_RBRACE):
             self.expect(CODE_RBRACE, "Ожидался символ '}'", {CODE_WHILE, CODE_SEMICOLON})
         self.skip_nl()
         if self.eof():
             self.add_missing_suffix_errors(0)
             return ParseResult(not self.errors and self.eof(), list(self.errors))
-        has_while = self.expect(CODE_WHILE, "Ожидалось ключевое слово while", self.CONDITION_FOLLOW)
+        if self.try_consume_keyword_split_by_semicolon(CODE_WHILE):
+            has_while = True
+        else:
+            has_while = self.expect(CODE_WHILE, "Ожидалось ключевое слово while", self.CONDITION_FOLLOW)
         if not has_while:
             if self.eof():
                 self.add_missing_suffix_errors(0)
@@ -401,6 +423,8 @@ class IronsParser:
         if self._prefer_left_anchor_for_missing(msg):
             anchor = self._left_anchor_token_for_suffix(tok)
             if anchor is not None:
+                if msg == "Ожидался символ '{'" and self.suffix_anchor_token is not None:
+                    return anchor.line, anchor.end_pos + 1
                 return anchor.line, anchor.start_pos
         current = self.peek()
         if current is tok:
@@ -419,7 +443,11 @@ class IronsParser:
     def _prefer_left_anchor_for_missing(self, msg):
         if not msg:
             return False
-        return msg in {"Ожидался символ '}'", "Ожидалось ключевое слово while"}
+        if msg in {"Ожидался символ '}'", "Ожидалось ключевое слово while"}:
+            return True
+        if msg == "Ожидался символ '{'" and self.suffix_anchor_token is not None:
+            return True
+        return False
 
     def _left_anchor_token_for_suffix(self, tok):
         if self.suffix_anchor_token is not None:
@@ -443,6 +471,8 @@ class IronsParser:
             return False
         lower = msg.lower()
         if "ожидался оператор сравнения" in lower and tok.code == CODE_ERROR:
+            if self._is_float_literal_lexical_error(tok) or self._is_value_like_error(tok):
+                return True
             return False
         insertion_after_previous_markers = (
             "ожидалось значение выражения",
@@ -482,6 +512,7 @@ class IronsParser:
         if any(marker in lower for marker in missing_markers):
             return True
 
+        # At hard EOF, generic "expected ..." diagnostics should anchor as insertion.
         if self.peek() is None and tok is self.previous():
             if msg.startswith("Ожидал") or msg.startswith("Ожидалось") or msg.startswith("Ожидались"):
                 return True
@@ -590,6 +621,7 @@ class IronsParser:
         commit_on_failure=False,
         commit_on_blocking=False,
     ):
+        """Skip lexical noise only when it leads to a real expected token."""
         expected_codes = set(expected_codes)
         i = self.pos
         skipped = []
@@ -664,6 +696,16 @@ class IronsParser:
         if tok and tok.code == CODE_SEMICOLON and code != CODE_SEMICOLON:
             self.consume_extra_semicolon()
             return self.expect(code, msg, follow)
+        if code == CODE_LBRACE and tok and tok.code == CODE_ERROR and self._is_repeated_symbol_error(tok, "}"):
+            self.add_err(msg, tok)
+            self.advance()
+            self._virtual_open_brace = True
+            return False
+        if code == CODE_LBRACE and tok and tok.code == CODE_RBRACE:
+            self.add_err(msg, tok)
+            self.advance()
+            self._virtual_open_brace = True
+            return False
         if code == CODE_REPEAT and tok:
             if tok.code in (CODE_IDENTIFIER, CODE_ERROR) and tok.lexeme and tok.lexeme[0].lower() == "r":
                 self.emit_recovery_error(RECOVERY_REPLACE, msg, tok)
@@ -916,6 +958,8 @@ class IronsParser:
         while self.peek() and not self.is_body_end_token(self.peek(), end_codes, error_end_lexeme):
             if self.is_while_boundary_token():
                 return
+            if self._consume_stray_open_braces_run_before_while():
+                return
             if self.is_condition_like_sequence(self.pos):
                 return
             if self.consume_extra_semicolon():
@@ -947,6 +991,105 @@ class IronsParser:
             and tok.lexeme
             and not any(ch.isalnum() for ch in tok.lexeme)
         )
+
+    def _identifiers_mergeable_across_semicolon(self, a, b):
+        if not (
+            a
+            and b
+            and a.code == CODE_IDENTIFIER
+            and b.code == CODE_IDENTIFIER
+        ):
+            return False
+        cat = (a.lexeme or "") + (b.lexeme or "")
+        if not cat or not cat[0].isalpha() or not cat.isascii():
+            return False
+        core = cat.replace("_", "")
+        if not core.isalnum():
+            return False
+        return True
+
+    def try_recover_split_identifier_semicolon_statement(self):
+        tok = self.peek()
+        if not (tok and tok.code == CODE_IDENTIFIER):
+            return False
+        semi_i = self._next_non_nl_index(self.pos + 1)
+        if semi_i is None or self.tokens[semi_i].code != CODE_SEMICOLON:
+            return False
+        id2_i = self._next_non_nl_index(semi_i + 1)
+        if id2_i is None or self.tokens[id2_i].code != CODE_IDENTIFIER:
+            return False
+        id2 = self.tokens[id2_i]
+        cat = ((tok.lexeme or "") + (id2.lexeme or "")).lower()
+        if cat in self._KEYWORD_JOINED_LOWER:
+            return False
+        if not self._identifiers_mergeable_across_semicolon(tok, id2):
+            return False
+        semi = self.tokens[semi_i]
+        self.add_extra_symbol_error(semi)
+        self.pos = id2_i + 1
+        self.skip_nl()
+        return True
+
+    def try_consume_keyword_split_by_semicolon(self, code):
+        name = {
+            CODE_REPEAT: "repeat",
+            CODE_WHILE: "while",
+            CODE_AND: "and",
+            CODE_OR: "or",
+            CODE_NOT: "not",
+        }.get(code)
+        if not name:
+            return False
+        tok = self.peek()
+        if not (tok and tok.code == CODE_IDENTIFIER):
+            return False
+        semi_i = self._next_non_nl_index(self.pos + 1)
+        if semi_i is None or self.tokens[semi_i].code != CODE_SEMICOLON:
+            return False
+        id2_i = self._next_non_nl_index(semi_i + 1)
+        if id2_i is None or self.tokens[id2_i].code != CODE_IDENTIFIER:
+            return False
+        b = self.tokens[id2_i]
+        if ((tok.lexeme or "") + (b.lexeme or "")).lower() != name:
+            return False
+        msg = self._KEYWORD_SEMICOLON_EXPECT_MSG.get(code)
+        if not msg:
+            return False
+        combined = (tok.lexeme or "") + ";" + (b.lexeme or "")
+        self.errors.append(
+            ParseError(
+                combined,
+                tok.line,
+                tok.start_pos,
+                b.end_pos,
+                msg,
+            )
+        )
+        self.pos = id2_i + 1
+        self.skip_nl()
+        return True
+
+    def try_recover_semicolon_split_condition_identifier(self):
+        tok = self.peek()
+        if not (tok and tok.code == CODE_IDENTIFIER):
+            return False
+        semi_i = self._next_non_nl_index(self.pos + 1)
+        if semi_i is None or self.tokens[semi_i].code != CODE_SEMICOLON:
+            return False
+        id2_i = self._next_non_nl_index(semi_i + 1)
+        if id2_i is None or self.tokens[id2_i].code != CODE_IDENTIFIER:
+            return False
+        id2 = self.tokens[id2_i]
+        cat = ((tok.lexeme or "") + (id2.lexeme or "")).lower()
+        if cat in self._KEYWORD_JOINED_LOWER:
+            return False
+        if not self._identifiers_mergeable_across_semicolon(tok, id2):
+            return False
+        self.add_extra_symbol_error(self.tokens[semi_i])
+        self.condition_progress = max(self.condition_progress, 2)
+        self.pos = id2_i + 1
+        self.skip_nl()
+        return True
 
     def _next_non_nl_index(self, start):
         i = start
@@ -991,16 +1134,25 @@ class IronsParser:
         if tok is None or tok.code in self.BODY_FOLLOW:
             return
 
+        if self.try_recover_split_identifier_semicolon_statement():
+            self.current_stmt_start_token = self.previous()
+            if not self.parse_assignment_operator_and_expr():
+                self.current_stmt_start_token = None
+                return
+            self.finish_stmt(successful_assignment=True)
+            self.current_stmt_start_token = None
+            return
+
         self.current_stmt_start_token = tok
         self.parse_assignment_left()
         if not self.parse_assignment_operator_and_expr():
             self.current_stmt_start_token = None
             return
 
-        self.finish_stmt()
+        self.finish_stmt(successful_assignment=True)
         self.current_stmt_start_token = None
 
-    def finish_stmt(self):
+    def finish_stmt(self, successful_assignment=False):
         if self.peek() and self.peek().code == CODE_NEWLINE:
             return
         self.skip_nl()
@@ -1008,6 +1160,14 @@ class IronsParser:
         if end is None or end.code in (CODE_RBRACE, CODE_WHILE) or self.is_while_boundary_token(end):
             return
         if end.code == CODE_SEMICOLON:
+            nxt = self.next_non_nl(self.pos + 1)
+            if (
+                successful_assignment
+                and nxt
+                and nxt.code == CODE_RBRACE
+            ):
+                self.advance()
+                return
             self.add_extra_symbol_error(end)
             self.advance()
             return
@@ -1015,6 +1175,10 @@ class IronsParser:
             return
         if end.code in (CODE_LPAREN, CODE_RPAREN):
             self.add_extra_symbol_error(end)
+            self.advance()
+            self.sync_to_follow("STMT")
+            return
+        if end.code == CODE_ERROR and self.is_separator_punctuation_error(end):
             self.advance()
             self.sync_to_follow("STMT")
             return
@@ -1167,6 +1331,64 @@ class IronsParser:
         while i < len(self.tokens) and self.tokens[i].code == CODE_NEWLINE:
             i += 1
         return i
+
+    def _find_stray_open_brace_run_before_while(self, start_idx):
+        i = self._skip_newlines_index(start_idx)
+        if i >= len(self.tokens):
+            return None
+        t = self.tokens[i]
+        if t.code == CODE_ERROR and self._is_repeated_symbol_error(t, "{"):
+            w = self._next_non_nl_index(i + 1)
+            if w is not None and self.tokens[w].code == CODE_WHILE:
+                return (i, i)
+            return None
+        if t.code != CODE_LBRACE:
+            return None
+        first_idx = i
+        last_idx = i
+        j = i
+        while True:
+            if j >= len(self.tokens) or self.tokens[j].code != CODE_LBRACE:
+                return None
+            last_idx = j
+            w = self._next_non_nl_index(j + 1)
+            if w is None:
+                return None
+            if self.tokens[w].code == CODE_WHILE:
+                return (first_idx, last_idx)
+            if self.tokens[w].code != CODE_LBRACE:
+                return None
+            j = w
+
+    def _consume_stray_open_braces_run_before_while(self):
+        span = self._find_stray_open_brace_run_before_while(self.pos)
+        if span is None:
+            return False
+        first_i, last_i = span
+        first_t = self.tokens[first_i]
+        last_t = self.tokens[last_i]
+        parts = []
+        for k in range(first_i, last_i + 1):
+            c = self.tokens[k].code
+            if c == CODE_NEWLINE:
+                continue
+            if c not in (CODE_LBRACE, CODE_ERROR):
+                continue
+            parts.append(self.tokens[k].lexeme or "")
+        frag = "".join(parts)
+        self.errors.append(
+            ParseError(
+                frag,
+                first_t.line,
+                first_t.start_pos,
+                last_t.end_pos,
+                "Ожидался символ '}'",
+            )
+        )
+        self.pos = self._next_non_nl_index(last_i + 1)
+        self.skip_nl()
+        self._suppress_rbrace_expect_after_stray_lbrace = True
+        return True
 
     def _skip_noise_before_condition_operator(self, start):
         i = self._skip_newlines_index(start)
@@ -1380,14 +1602,23 @@ class IronsParser:
             if tok.code == CODE_ERROR:
                 if self.is_trailing_separator_lexical_noise(tok):
                     has_semicolon = self.has_following_semicolon()
-                    last_error = tok
+                    consumed = 0
+                    last_tok = tok
                     while self.peek() and self.peek().code == CODE_ERROR:
-                        last_error = self.advance()
-                    if not has_semicolon:
+                        last_tok = self.advance()
+                        consumed += 1
+                    first_lx = (tok.lexeme or "") if tok else ""
+                    want_semicolon_hint = (
+                        not has_semicolon
+                        and consumed == 1
+                        and len(first_lx) == 1
+                        and first_lx != ":"
+                    )
+                    if want_semicolon_hint:
                         self.emit_recovery_error(
                             RECOVERY_INSERT,
                             "Ожидался символ ';' в конце конструкции",
-                            last_error,
+                            last_tok,
                         )
                     self.condition_progress = max(self.condition_progress, 5)
                     return
@@ -1547,10 +1778,25 @@ class IronsParser:
         rel_ok = self.parse_rel_op_slot(left_was_bad_token)
         if rel_ok:
             self.parse_rhs_slot()
+        self._consume_malformed_comma_decimal_rhs_suffix()
+
+    def _consume_malformed_comma_decimal_rhs_suffix(self):
+        tok = self.peek()
+        if not (tok and tok.code == CODE_ERROR and tok.lexeme == ","):
+            return
+        nxi = self._next_non_nl_index(self.pos + 1)
+        if not (nxi and self.tokens[nxi].code == CODE_DIGIT):
+            return
+        self.advance()
+        self.condition_progress = max(self.condition_progress, 4)
+        self.advance()
+        self.skip_nl()
 
     def parse_comparison_left_operand(self):
         left = self.peek()
         left_was_bad_token = False
+        if self.try_recover_semicolon_split_condition_identifier():
+            return True, left_was_bad_token
         if left and left.code == CODE_IDENTIFIER:
             self.condition_progress = max(self.condition_progress, 2)
             self.advance()
@@ -1659,6 +1905,75 @@ class IronsParser:
             return False
         return False
 
+    def _bump_condition_progress_after_wrong_rel_op(self, op):
+        self.condition_progress = max(self.condition_progress, 3)
+        if not op:
+            return
+        nxt_i = self._next_non_nl_index(self.pos + 1)
+        if nxt_i is None:
+            return
+        nxt = self.tokens[nxt_i]
+        if nxt.code in (CODE_IDENTIFIER, CODE_DIGIT):
+            self.condition_progress = max(self.condition_progress, 4)
+            return
+        if nxt.code == CODE_ERROR and (
+            self._is_value_like_error(nxt) or self._is_float_literal_lexical_error(nxt)
+        ):
+            self.condition_progress = max(self.condition_progress, 4)
+
+    def _is_float_literal_lexical_error(self, tok):
+        if not (tok and tok.code == CODE_ERROR and tok.lexeme):
+            return False
+        if "." not in tok.lexeme:
+            return False
+        head = tok.lexeme.lstrip("+-")
+        if not head or not head[0].isdigit():
+            return False
+        return all(ch.isdigit() or ch == "." for ch in head)
+
+    def _missing_comparison_before_rhs_value_token(self, tok):
+        if not (tok and tok.code == CODE_ERROR):
+            return False
+        if self._is_comparison_like_error(tok):
+            return False
+        if self._is_float_literal_lexical_error(tok):
+            return True
+        return bool(self._is_value_like_error(tok))
+
+    def _identifier_starts_body_assignment_at(self, idx):
+        if idx >= len(self.tokens) or self.tokens[idx].code != CODE_IDENTIFIER:
+            return False
+        nxt_i = self._next_non_nl_index(idx + 1)
+        if nxt_i is None:
+            return False
+        nxt = self.tokens[nxt_i]
+        if nxt.code in (CODE_ASSIGN, CODE_COMPOUND_ASSIGN):
+            return True
+        if nxt.code == CODE_ERROR and self._is_operator_like_error(nxt):
+            return True
+        return False
+
+    def consume_identifier_junk_before_open_brace(self):
+        junk_tail = None
+        while self.peek() and self.peek().code == CODE_IDENTIFIER:
+            nxt = self.next_non_nl(self.pos + 1)
+            if nxt and nxt.code == CODE_LBRACE:
+                break
+            nxt_i = self._next_non_nl_index(self.pos + 1)
+            if nxt_i is None:
+                break
+            if self.tokens[nxt_i].code != CODE_IDENTIFIER:
+                break
+            if self._identifier_starts_body_assignment_at(nxt_i):
+                break
+            junk = self.peek()
+            self.add_err(f"Лишний токен '{junk.lexeme}'", junk)
+            junk_tail = junk
+            self.advance()
+            self.skip_nl()
+        if junk_tail is not None:
+            self.suffix_anchor_token = junk_tail
+
     def parse_rel_op_slot(self, left_was_bad_token=False):
         self.skip_nl()
         while self.consume_extra_semicolon_before_more_input():
@@ -1687,6 +2002,16 @@ class IronsParser:
                 self.condition_progress = max(self.condition_progress, 3)
                 return True
             if op.code == CODE_ERROR:
+                if self._missing_comparison_before_rhs_value_token(op):
+                    self.emit_recovery_error(
+                        RECOVERY_INSERT,
+                        self.comparison_operator_error_message(op),
+                        op,
+                    )
+                    self.condition_progress = max(self.condition_progress, 3)
+                    self.condition_progress = max(self.condition_progress, 4)
+                    self.sync_to_follow("CONDITION", concrete_first("LOGIC_OP"))
+                    return False
                 rhs_missing = self.missing_rhs_after_comparison_noise()
                 fragment = "" if rhs_missing else op.lexeme
                 self.add_err(self.comparison_operator_error_message(op), op, fragment=fragment)
@@ -1706,6 +2031,7 @@ class IronsParser:
                         )
             else:
                 self.add_err(self.comparison_operator_error_message(op), op)
+            self._bump_condition_progress_after_wrong_rel_op(op)
             self.sync_to_follow("CONDITION", concrete_first("LOGIC_OP"))
             return False
         self.condition_progress = max(self.condition_progress, 3)
@@ -1863,6 +2189,39 @@ def _dedup_errors(errors):
     return out
 
 
+def _suppress_lexer_brace_dup_after_wrong_open(parser_errors, lex_err):
+    frag = lex_err.fragment or ""
+    if len(frag) < 2 or set(frag) != {"}"}:
+        return False
+    msg = lex_err.message or ""
+    if "Получена последовательность" not in msg:
+        return False
+    if "Ожидался символ '}'" not in msg:
+        return False
+    for pe in parser_errors:
+        if (
+            pe.message == "Ожидался символ '{'"
+            and pe.fragment == frag
+            and pe.line == lex_err.line
+            and pe.start_pos == lex_err.start_pos
+            and pe.end_pos == lex_err.end_pos
+        ):
+            return True
+    return False
+
+
+def _suppress_lexer_double_lbrace_when_parser_missing_close(parser_errors, lex_err):
+    frag = lex_err.fragment or ""
+    if frag != "{{" or "Получена последовательность" not in (lex_err.message or ""):
+        return False
+    if "Ожидался символ '{'" not in (lex_err.message or ""):
+        return False
+    for pe in parser_errors:
+        if pe.message == "Ожидался символ '}'" and pe.line == lex_err.line:
+            return True
+    return False
+
+
 def _is_bracket_replacement_error(err):
     return (
         (err.fragment == "[" and err.message == "Ожидался символ '{'")
@@ -1915,6 +2274,12 @@ def analyze_syntax(tokens):
     lexer_errors = collect_lexer_errors(tokens)
     clean = filter_tokens_for_parser(tokens)
     result = IronsParser(clean).parse()
+    lexer_errors = [
+        e
+        for e in lexer_errors
+        if not _suppress_lexer_brace_dup_after_wrong_open(result.errors, e)
+        and not _suppress_lexer_double_lbrace_when_parser_missing_close(result.errors, e)
+    ]
     lexer_errors = _without_replaced_bracket_lexer_errors(lexer_errors, result.errors)
     lexer_errors = _without_keyword_replacement_lexer_errors(lexer_errors, result.errors)
     parser_error_ids = {id(err) for err in result.errors}
