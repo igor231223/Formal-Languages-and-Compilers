@@ -166,6 +166,16 @@ class Scanner:
             lexeme = char
             while not self.is_at_end() and self.peek().isdigit():
                 lexeme += self.advance()
+            if not self.is_at_end() and self.peek().isalpha():
+                j = self.pos
+                tail = ""
+                while j < len(self.text) and self.text[j].isascii() and self.text[j].isalnum():
+                    tail += self.text[j]
+                    j += 1
+                if tail.lower() not in {"repeat", "while", "and", "or", "not"}:
+                    code, type_name = TOKEN_TYPES["ERROR"]
+                    end_pos = start_pos + len(lexeme) - 1
+                    return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
             if not self.is_at_end() and self.peek() == '.':
                 lexeme += self.advance()
                 while not self.is_at_end() and self.peek().isdigit():
