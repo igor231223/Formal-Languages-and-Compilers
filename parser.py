@@ -97,6 +97,8 @@ def _lexer_message_for_token(token):
     lx = token.lexeme or ""
     if lx and all(ch in ".,:?#$%^&_`~\\|" for ch in lx):
         return "Недопустимая лексема (лексическая ошибка)"
+    if lx.isdigit():
+        return "Идентификатор не может начинаться с цифры (лексическая ошибка)"
     if lx and len(lx) > 1 and len(set(lx)) == 1 and lx[0] in "{};()[]":
         ch = lx[0]
         return f"Ожидался символ '{ch}'. Получена последовательность '{lx}'."
@@ -300,7 +302,7 @@ class IronsParser:
                 self.expect(CODE_REPEAT, "Ожидалось ключевое слово repeat", self.PROGRAM_FOLLOW)
         self.skip_nl()
         self.consume_extra_keywords({CODE_REPEAT, CODE_WHILE})
-        paired_body_close, error_body_close = self.wrong_body_closer_for(self.peek())
+        paired_body_close, error_body_close = (None, None)
         self.consume_identifier_junk_before_open_brace()
         self._consume_extra_rbrace_before_opening_body_brace()
         opened = self.expect(CODE_LBRACE, "Ожидался символ '{'", self.BODY_FOLLOW)
@@ -526,7 +528,6 @@ class IronsParser:
         if any(marker in lower for marker in missing_markers):
             return True
 
-        # At hard EOF, generic "expected ..." diagnostics should anchor as insertion.
         if self.peek() is None and tok is self.previous():
             if msg.startswith("Ожидал") or msg.startswith("Ожидалось") or msg.startswith("Ожидались"):
                 return True
@@ -741,6 +742,18 @@ class IronsParser:
             self._open_brace_after_double_lbrace_lexer_error = True
             return False
         if code == CODE_REPEAT and tok:
+            if (
+                tok.code == CODE_ERROR
+                and self.is_keyword_prefix_noise_error(tok)
+            ):
+                nxt = self.next_non_nl(self.pos + 1)
+                if nxt and nxt.code == CODE_LBRACE:
+                    self.errors.append(
+                        ParseError("", tok.line, tok.end_pos + 1, tok.end_pos + 1, msg)
+                    )
+                    self.advance()
+                    self.skip_nl()
+                    return False
             if tok.code in (CODE_IDENTIFIER, CODE_ERROR) and tok.lexeme and tok.lexeme[0].lower() == "r":
                 self.emit_recovery_error(RECOVERY_REPLACE, msg, tok)
                 self.advance()
@@ -757,6 +770,24 @@ class IronsParser:
                 self.emit_recovery_error(RECOVERY_INSERT, msg, tok)
                 return False
         if code == CODE_WHILE and tok:
+            if tok.code == CODE_ERROR and self.is_keyword_prefix_noise_error(tok):
+                nxt = self.next_non_nl(self.pos + 1)
+                if nxt:
+                    nxt_whileish = (
+                        nxt.code == CODE_WHILE
+                        or (
+                            nxt.code in (CODE_IDENTIFIER, CODE_ERROR)
+                            and nxt.lexeme
+                            and _looks_like_keyword(nxt.lexeme, "while")
+                        )
+                    )
+                    if not nxt_whileish and self.is_condition_prefix_start(nxt):
+                        self.errors.append(
+                            ParseError("", tok.line, tok.end_pos + 1, tok.end_pos + 1, msg)
+                        )
+                        self.advance()
+                        self.skip_nl()
+                        return False
             if (
                 tok.code in (CODE_IDENTIFIER, CODE_ERROR)
                 and tok.lexeme
@@ -767,11 +798,17 @@ class IronsParser:
                 return True
             if self.consume_extra_tokens_before_missing_while():
                 return self.expect(code, msg, follow)
-        if tok and tok.code == CODE_ERROR:
-            if self.is_wrong_body_bracket(tok):
-                self.add_err(msg, tok)
+        if (
+            tok
+            and tok.code == CODE_ERROR
+            and code in (CODE_LBRACE, CODE_WHILE)
+        ):
+            nxt = self.next_non_nl(self.pos + 1)
+            if nxt and nxt.code == code:
                 self.advance()
-                return True
+                self.skip_nl()
+                return self.expect(code, msg, follow)
+        if tok and tok.code == CODE_ERROR:
             repeated_symbol = self.expected_repeated_symbol(code)
             if repeated_symbol and self._is_repeated_symbol_error(tok, repeated_symbol):
                 self.add_err(
@@ -793,6 +830,7 @@ class IronsParser:
             and (
                 nxt.code == code
                 or (nxt.code == CODE_ERROR and _looks_like_keyword(nxt.lexeme, expected_keyword))
+                or (nxt.code == CODE_IDENTIFIER and _looks_like_keyword(nxt.lexeme, expected_keyword))
             )
         ):
             self.advance()
@@ -2125,6 +2163,14 @@ class IronsParser:
             if nxt_i is None:
                 break
             if self.tokens[nxt_i].code != CODE_IDENTIFIER:
+                if self.tokens[nxt_i].code == CODE_ERROR and self._is_repeated_symbol_error(
+                    self.tokens[nxt_i], "{"
+                ):
+                    junk = self.peek()
+                    self.add_err(f"Лишний токен '{junk.lexeme}'", junk)
+                    junk_tail = junk
+                    self.advance()
+                    self.skip_nl()
                 break
             if self._identifier_starts_body_assignment_at(nxt_i):
                 break
@@ -2287,16 +2333,10 @@ class IronsParser:
         return self.operator_error_kind(tok) == "compare_like"
 
     def wrong_body_closer_for(self, tok):
-        if not tok:
-            return None, None
-        if tok.code == CODE_LPAREN:
-            return CODE_RPAREN, None
-        if tok.code == CODE_ERROR and tok.lexeme == "[":
-            return None, "]"
         return None, None
 
     def is_wrong_body_bracket(self, tok):
-        return bool(tok and tok.code == CODE_ERROR and tok.lexeme in ("[", "]"))
+        return False
 
 
 def filter_tokens_for_parser(tokens):
@@ -2329,7 +2369,8 @@ def collect_lexer_errors(tokens):
                     f"'{token.lexeme}' (лексическая ошибка)"
                 )
             elif seen_while and not after_construction_semicolon:
-                message = f"Недопустимая лексема '{token.lexeme}' (лексическая ошибка)"
+                if message != "Идентификатор не может начинаться с цифры (лексическая ошибка)":
+                    message = f"Недопустимая лексема '{token.lexeme}' (лексическая ошибка)"
 
             split_parts = _split_keyword_like_error_with_edge_noise(token, message)
             if split_parts is not None:
@@ -2427,6 +2468,27 @@ def _without_replaced_bracket_lexer_errors(lexer_errors, parser_errors):
     ]
 
 
+def _without_lexer_noise_before_keyword_insert(lexer_errors, parser_errors):
+    insert_points = set()
+    for e in parser_errors:
+        if (
+            e.fragment == ""
+            and e.start_pos == e.end_pos
+            and e.message in ("Ожидалось ключевое слово repeat", "Ожидалось ключевое слово while")
+        ):
+            insert_points.add((e.line, e.start_pos))
+    if not insert_points:
+        return lexer_errors
+    out = []
+    for le in lexer_errors:
+        frag = le.fragment or ""
+        if frag and all(not ch.isalnum() for ch in frag):
+            if (le.line, le.end_pos + 1) in insert_points:
+                continue
+        out.append(le)
+    return out
+
+
 def _without_keyword_replacement_lexer_errors(lexer_errors, parser_errors):
     keyword_replaced_spans = {
         (err.line, err.start_pos, err.end_pos, err.fragment)
@@ -2466,6 +2528,7 @@ def analyze_syntax(tokens):
         and not _suppress_lexer_double_lbrace_when_parser_missing_close(result.errors, e)
     ]
     lexer_errors = _without_replaced_bracket_lexer_errors(lexer_errors, result.errors)
+    lexer_errors = _without_lexer_noise_before_keyword_insert(lexer_errors, result.errors)
     lexer_errors = _without_keyword_replacement_lexer_errors(lexer_errors, result.errors)
     parser_error_ids = {id(err) for err in result.errors}
     all_errors = _dedup_errors(lexer_errors + result.errors)
