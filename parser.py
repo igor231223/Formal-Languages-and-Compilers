@@ -742,6 +742,22 @@ class IronsParser:
             self._open_brace_after_double_lbrace_lexer_error = True
             return False
         if code == CODE_REPEAT and tok:
+            if tok.code == CODE_DIGIT:
+                nxt = self.next_non_nl(self.pos + 1)
+                if nxt and (
+                    nxt.code == CODE_REPEAT
+                    or (
+                        nxt.code in (CODE_IDENTIFIER, CODE_ERROR)
+                        and nxt.lexeme
+                        and _looks_like_keyword(nxt.lexeme, "repeat")
+                    )
+                ):
+                    self.add_err(
+                        f"Лишний токен '{tok.lexeme}' перед ожидаемым '{self.label(code)}'",
+                        tok,
+                    )
+                    self.advance()
+                    return self.expect(code, msg, follow)
             if (
                 tok.code == CODE_ERROR
                 and self.is_keyword_prefix_noise_error(tok)
@@ -770,6 +786,22 @@ class IronsParser:
                 self.emit_recovery_error(RECOVERY_INSERT, msg, tok)
                 return False
         if code == CODE_WHILE and tok:
+            if tok.code == CODE_DIGIT:
+                nxt = self.next_non_nl(self.pos + 1)
+                if nxt and (
+                    nxt.code == CODE_WHILE
+                    or (
+                        nxt.code in (CODE_IDENTIFIER, CODE_ERROR)
+                        and nxt.lexeme
+                        and _looks_like_keyword(nxt.lexeme, "while")
+                    )
+                ):
+                    self.add_err(
+                        f"Лишний токен '{tok.lexeme}' перед ожидаемым '{self.label(code)}'",
+                        tok,
+                    )
+                    self.advance()
+                    return self.expect(code, msg, follow)
             if tok.code == CODE_ERROR and self.is_keyword_prefix_noise_error(tok):
                 nxt = self.next_non_nl(self.pos + 1)
                 if nxt:
@@ -1100,6 +1132,21 @@ class IronsParser:
             return False
         return True
 
+    def _consecutive_semicolon_indices_from(self, first_semi_i):
+        if first_semi_i is None or self.tokens[first_semi_i].code != CODE_SEMICOLON:
+            return []
+        out = []
+        cur = first_semi_i
+        while cur is not None and cur < len(self.tokens):
+            if self.tokens[cur].code == CODE_NEWLINE:
+                cur += 1
+                continue
+            if self.tokens[cur].code != CODE_SEMICOLON:
+                break
+            out.append(cur)
+            cur = self._next_non_nl_index(cur + 1)
+        return out
+
     def try_recover_split_identifier_semicolon_statement(self):
         tok = self.peek()
         if not (tok and tok.code == CODE_IDENTIFIER):
@@ -1107,7 +1154,8 @@ class IronsParser:
         semi_i = self._next_non_nl_index(self.pos + 1)
         if semi_i is None or self.tokens[semi_i].code != CODE_SEMICOLON:
             return False
-        id2_i = self._next_non_nl_index(semi_i + 1)
+        semi_chain = self._consecutive_semicolon_indices_from(semi_i)
+        id2_i = self._next_non_nl_index(semi_chain[-1] + 1)
         if id2_i is None or self.tokens[id2_i].code != CODE_IDENTIFIER:
             return False
         id2 = self.tokens[id2_i]
@@ -1116,8 +1164,8 @@ class IronsParser:
             return False
         if not self._identifiers_mergeable_across_semicolon(tok, id2):
             return False
-        semi = self.tokens[semi_i]
-        self.add_extra_symbol_error(semi)
+        for si in semi_chain:
+            self.add_extra_symbol_error(self.tokens[si])
         self.pos = id2_i + 1
         self.skip_nl()
         return True
@@ -1138,7 +1186,8 @@ class IronsParser:
         semi_i = self._next_non_nl_index(self.pos + 1)
         if semi_i is None or self.tokens[semi_i].code != CODE_SEMICOLON:
             return False
-        id2_i = self._next_non_nl_index(semi_i + 1)
+        semi_chain = self._consecutive_semicolon_indices_from(semi_i)
+        id2_i = self._next_non_nl_index(semi_chain[-1] + 1)
         if id2_i is None or self.tokens[id2_i].code != CODE_IDENTIFIER:
             return False
         b = self.tokens[id2_i]
@@ -1154,7 +1203,7 @@ class IronsParser:
         msg = self._KEYWORD_SEMICOLON_EXPECT_MSG.get(code)
         if not msg:
             return False
-        combined = (tok.lexeme or "") + ";" + (b.lexeme or "")
+        combined = (tok.lexeme or "") + ";" * len(semi_chain) + (b.lexeme or "")
         self.errors.append(
             ParseError(
                 combined,
@@ -1213,7 +1262,8 @@ class IronsParser:
         semi_i = self._next_non_nl_index(self.pos + 1)
         if semi_i is None or self.tokens[semi_i].code != CODE_SEMICOLON:
             return False
-        id2_i = self._next_non_nl_index(semi_i + 1)
+        semi_chain = self._consecutive_semicolon_indices_from(semi_i)
+        id2_i = self._next_non_nl_index(semi_chain[-1] + 1)
         if id2_i is None or self.tokens[id2_i].code != CODE_IDENTIFIER:
             return False
         id2 = self.tokens[id2_i]
@@ -1222,7 +1272,8 @@ class IronsParser:
             return False
         if not self._identifiers_mergeable_across_semicolon(tok, id2):
             return False
-        self.add_extra_symbol_error(self.tokens[semi_i])
+        for si in semi_chain:
+            self.add_extra_symbol_error(self.tokens[si])
         self.condition_progress = max(self.condition_progress, 2)
         self.pos = id2_i + 1
         self.skip_nl()
@@ -2049,6 +2100,11 @@ class IronsParser:
             return False, left_was_bad_token
 
         if left and left.code == CODE_DIGIT:
+            lx = left.lexeme or ""
+            if lx.startswith("-") and len(lx) > 1 and lx[1:].isdigit():
+                self.condition_progress = max(self.condition_progress, 2)
+                self.advance()
+                return True, left_was_bad_token
             self.emit_recovery_error(RECOVERY_INSERT, "В условии ожидался идентификатор", left)
             self.condition_progress = max(self.condition_progress, 2)
             left_was_bad_token = False
@@ -2353,6 +2409,16 @@ def collect_lexer_errors(tokens):
         if token.code == err_code:
             if token.lexeme and all(ch in "<>=!+-*/" for ch in token.lexeme):
                 if token.lexeme not in ("!",):
+                    if len(token.lexeme) >= 2 and set(token.lexeme) == {"-"}:
+                        lexer_errors.append(
+                            ParseError(
+                                token.lexeme,
+                                token.line,
+                                token.start_pos,
+                                token.end_pos,
+                                "Недопустимая лексема (лексическая ошибка)",
+                            )
+                        )
                     if token.code not in (CODE_WHITESPACE, CODE_NEWLINE):
                         prev_significant = token
                     continue

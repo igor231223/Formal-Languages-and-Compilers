@@ -128,7 +128,9 @@ class Scanner:
         if core == "not":
             code, type_name = TOKEN_TYPES["NOT"]
             return Token(code, type_name, core, line, start_pos, end_pos)
-        if core.isdigit():
+        if core.isdigit() or (
+            len(core) > 1 and core[0] == "-" and core[1:].isdigit()
+        ):
             code, type_name = TOKEN_TYPES["DIGIT_NUMBER"]
             return Token(code, type_name, core, line, start_pos, end_pos)
         if core and core[0].isalpha() and core.isascii() and core.replace("_", "").isalnum():
@@ -173,9 +175,21 @@ class Scanner:
                     tail += self.text[j]
                     j += 1
                 if tail.lower() not in {"repeat", "while", "and", "or", "not"}:
-                    code, type_name = TOKEN_TYPES["ERROR"]
-                    end_pos = start_pos + len(lexeme) - 1
-                    return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+                    from parser import _looks_like_keyword
+
+                    tl = tail.lower()
+                    glued_kw = len(lexeme) == 1 and (
+                        _looks_like_keyword(tail, "repeat")
+                        or _looks_like_keyword(tail, "while")
+                        or any(
+                            kw.startswith(tl) and len(tl) < len(kw)
+                            for kw in ("repeat", "while", "and", "or", "not")
+                        )
+                    )
+                    if not glued_kw:
+                        code, type_name = TOKEN_TYPES["ERROR"]
+                        end_pos = start_pos + len(lexeme) - 1
+                        return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
             if not self.is_at_end() and self.peek() == '.':
                 lexeme += self.advance()
                 while not self.is_at_end() and self.peek().isdigit():
@@ -279,6 +293,17 @@ class Scanner:
         lexeme = first_char
         while not self.is_at_end() and self.peek() in "<>=!+-*/":
             lexeme += self.advance()
+        if len(lexeme) >= 2 and set(lexeme) == {"-"}:
+            code, type_name = TOKEN_TYPES["ERROR"]
+            end_pos = start_pos + len(lexeme) - 1
+            return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
+        if lexeme == "-" and not self.is_at_end() and self.peek().isdigit():
+            lexeme += self.advance()
+            while not self.is_at_end() and self.peek().isdigit():
+                lexeme += self.advance()
+            code, type_name = TOKEN_TYPES["DIGIT_NUMBER"]
+            end_pos = start_pos + len(lexeme) - 1
+            return Token(code, type_name, lexeme, self.line, start_pos, end_pos)
         if not self.is_at_end() and self.peek() not in " \n\t{};()[]":
             while not self.is_at_end() and self.peek() not in " \n\t{};()[]":
                 lexeme += self.advance()
