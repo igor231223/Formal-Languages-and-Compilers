@@ -72,9 +72,19 @@ def _looks_like_keyword(lexeme, keyword):
         return True
     if lx == keyword:
         return True
+    if keyword in ("repeat", "while") and compact and len(compact) >= 4:
+        if _levenshtein(compact, keyword) <= 2:
+            return True
     if lx[0] != keyword[0]:
         return False
     return _levenshtein(lx, keyword) <= 2
+
+
+def _mergeable_keyword_prefix_noise_lexeme(lx):
+    s = lx or ""
+    if not s or any(c.isalnum() for c in s):
+        return False
+    return all(c == "`" for c in s)
 
 
 def _is_keyword_with_affix_noise(lexeme, keyword):
@@ -758,6 +768,21 @@ class IronsParser:
                     )
                     self.advance()
                     return self.expect(code, msg, follow)
+            nxt_kw = self.next_non_nl(self.pos + 1)
+            if (
+                tok.code == CODE_ERROR
+                and nxt_kw
+                and nxt_kw.code == CODE_IDENTIFIER
+                and _mergeable_keyword_prefix_noise_lexeme(tok.lexeme)
+                and _looks_like_keyword((tok.lexeme or "") + (nxt_kw.lexeme or ""), "repeat")
+            ):
+                merged = (tok.lexeme or "") + (nxt_kw.lexeme or "")
+                self.errors.append(
+                    ParseError(merged, tok.line, tok.start_pos, nxt_kw.end_pos, msg)
+                )
+                self.advance()
+                self.advance()
+                return True
             if (
                 tok.code == CODE_ERROR
                 and self.is_keyword_prefix_noise_error(tok)
@@ -802,6 +827,21 @@ class IronsParser:
                     )
                     self.advance()
                     return self.expect(code, msg, follow)
+            nxt_wh_kw = self.next_non_nl(self.pos + 1)
+            if (
+                tok.code == CODE_ERROR
+                and nxt_wh_kw
+                and nxt_wh_kw.code == CODE_IDENTIFIER
+                and _mergeable_keyword_prefix_noise_lexeme(tok.lexeme)
+                and _looks_like_keyword((tok.lexeme or "") + (nxt_wh_kw.lexeme or ""), "while")
+            ):
+                merged = (tok.lexeme or "") + (nxt_wh_kw.lexeme or "")
+                self.errors.append(
+                    ParseError(merged, tok.line, tok.start_pos, nxt_wh_kw.end_pos, msg)
+                )
+                self.advance()
+                self.advance()
+                return True
             if tok.code == CODE_ERROR and self.is_keyword_prefix_noise_error(tok):
                 nxt = self.next_non_nl(self.pos + 1)
                 if nxt:
@@ -2399,14 +2439,33 @@ def filter_tokens_for_parser(tokens):
     return [t for t in tokens if t.code != TOKEN_TYPES["WHITESPACE"][0]]
 
 
+def _suppress_lexer_noise_before_keyword_like_ident(tokens, idx, token):
+    lx = token.lexeme or ""
+    if not _mergeable_keyword_prefix_noise_lexeme(lx):
+        return False
+    j = idx + 1
+    nl_code = TOKEN_TYPES["NEWLINE"][0]
+    id_code = TOKEN_TYPES["IDENTIFIER"][0]
+    while j < len(tokens) and tokens[j].code == nl_code:
+        j += 1
+    if j >= len(tokens) or tokens[j].code != id_code:
+        return False
+    merged = lx + (tokens[j].lexeme or "")
+    return _looks_like_keyword(merged, "repeat") or _looks_like_keyword(merged, "while")
+
+
 def collect_lexer_errors(tokens):
     err_code = TOKEN_TYPES["ERROR"][0]
     lexer_errors = []
     prev_significant = None
     seen_while = False
     after_construction_semicolon = False
-    for token in tokens:
+    for idx, token in enumerate(tokens):
         if token.code == err_code:
+            if _suppress_lexer_noise_before_keyword_like_ident(tokens, idx, token):
+                if token.code not in (CODE_WHITESPACE, CODE_NEWLINE):
+                    prev_significant = token
+                continue
             if token.lexeme and all(ch in "<>=!+-*/" for ch in token.lexeme):
                 if token.lexeme not in ("!",):
                     if len(token.lexeme) >= 2 and set(token.lexeme) == {"-"}:
@@ -2554,7 +2613,7 @@ def _without_lexer_noise_before_keyword_insert(lexer_errors, parser_errors):
         out.append(le)
     return out
 
-
+    
 def _without_keyword_replacement_lexer_errors(lexer_errors, parser_errors):
     keyword_replaced_spans = {
         (err.line, err.start_pos, err.end_pos, err.fragment)
