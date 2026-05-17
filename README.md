@@ -8,6 +8,7 @@
 - [Лабораторная работа 4](#lab-4)
 - [Лабораторная работа 5](#lab-5)
 - [Лабораторная работа 6](#lab-6)
+- [Лабораторная работа 7](#lab-7)
 
 <a id="lab-1"></a>
 # Лабораторная работа: Специализированный текстовый редактор с поддержкой локализации
@@ -678,5 +679,297 @@ a_b + 10
 
 <img width="1099" height="779" alt="image" src="https://github.com/user-attachments/assets/7beb95a1-77ff-4bbb-8fa3-72262bffcf4f" />
 
+---
+
+<a id="lab-7"></a>
+# Лабораторная работа 7. Анализ и преобразование кода с использованием Clang и LLVM
+
+## Цель
+
+Познакомиться с инструментарием Clang и LLVM, освоить получение абстрактного синтаксического дерева (AST) и промежуточного представления (LLVM IR) для кода на C/C++, научиться применять базовые оптимизации, строить графы потока управления (CFG), а также анализировать влияние оптимизаций на различные синтаксические конструкции языка.
+
+## Постановка задачи:
+1. Установка среды
+2. Работа с AST
+3. Генерация LLVM IR
+4. Оптимизация IR
+5. Построение CFG
+6. Индивидуальное задание (по варианту)
+
+## Установка среды (1)
+```bash
+sudo apt install clang llvm 
+```
+
+<img width="646" height="484" alt="image" src="https://github.com/user-attachments/assets/eadfa2bb-6f98-4a9e-a89b-cd04f51440f4" />
+
+```bash
+sudo apt install graphviz
+```
+
+<img width="652" height="484" alt="image" src="https://github.com/user-attachments/assets/f498fa36-bbb4-4984-ae51-05f09890bd7d" />
+
+Создание и переход в рабочую папку:
+
+<img width="654" height="60" alt="image" src="https://github.com/user-attachments/assets/06ae8d52-b8ad-47a7-81f0-e84a4544d74b" />
+
+## Общее задание (2-5)
+Заданная программа на языке C
+```bash
+#include <stdio.h>
+
+int square(int x) {
+    return x * x;
+}
+
+int main() {
+    int a = 5;
+    int b = square(a);
+    printf("%d\n", b);
+    return 0;
+}
+```
+# Получение AST
+Команда 
+```bash
+clang -Xclang -ast-dump -fsyntax-only main.c
+```
+Результат:
+
+<img width="1217" height="580" alt="image" src="https://github.com/user-attachments/assets/41dc5b95-b9a2-41b6-9ceb-e23362b27557" />
+
+# Генерация LLVM IR
+Команда 
+```bash
+clang -S -emit-llvm main.c -o main.ll
+```
+Результат:
+
+<img width="1689" height="1010" alt="image" src="https://github.com/user-attachments/assets/0566bd99-f7ea-4e16-a85e-712ae3414a2b" />
+
+# Оптимизация IR (-O0 и -O2)
+Команда 
+```bash
+clang -O0 -S -emit-llvm main.c -o main_O0.ll
+```
+До оптимизации все переменные размещены в памяти через alloca, множество операций load и store, а также square вызывается как отдельная функция.
+
+Результат:
+
+<img width="1899" height="916" alt="image" src="https://github.com/user-attachments/assets/503677d6-fd10-4d2e-8312-964137c2a2fa" />
+
+---
+
+Команда 
+```bash
+clang -O2 -S -emit-llvm main.c -o main_O2.ll
+```
+После оптимизации вся функция square исчезла – она была встроена (-inline) и затем вычислена (оптимизация -constprop), далее никаких переменных, alloca, store, load – всё удалено (оптимизации -mem2reg, -dce), и остался только вызов printf(25).
+
+Результат:
+
+<img width="1884" height="878" alt="image" src="https://github.com/user-attachments/assets/f403be47-db96-47eb-b093-6a483730c1d8" />
+
+# Построение CFG
+Граф потока управления до оптимизации:
+```bash
+opt -passes=dot-cfg -disable-output main_O0.ll
+dot -Tpng .main.dot -o main_cfg_O0.png
+```
+Граф потока управления после оптимизации:
+```bash
+opt -passes=dot-cfg -disable-output main_O2.ll
+dot -Tpng .main.dot -o main_cfg_O2.png
+```
+
+Команда для просмотра файлов с CGF:
+```bash
+xdg-open main_cfg_O0.png
+xdg-open main_cfg_O2.png
+```
+
+CFG до оптимизации (-O0):
+
+<img width="1215" height="94" alt="image" src="https://github.com/user-attachments/assets/98cb5704-fdc7-4275-bfae-0b169b3399eb" />
+
+<img width="781" height="344" alt="image" src="https://github.com/user-attachments/assets/5ef9015e-bc92-4f06-9390-2d9a99e1b2d1" />
+
+CFG после оптимизации (-O2):
+
+<img width="1211" height="92" alt="image" src="https://github.com/user-attachments/assets/8a6f8b7d-e8c9-4e2e-b960-a7894a8f2709" />
+
+<img width="656" height="158" alt="image" src="https://github.com/user-attachments/assets/108a9053-69eb-4585-85b1-5e2149b81c88" />
+
+# Выводы общей части:
+1. С помощью Clang можно получить полную структуру AST и IR, а также CGF;
+2. LLVM предоставляет гибкие инструменты анализа и оптимизации;
+3. Промежуточное представление кода удобно для написания компиляторных трансформаций.
+
+---
+
+# Индивидуальная часть работы:
+
+# Вариант:
+Цикл do-while
+
+# Пример:
+```bash
+int main() {
+   int i = 0, sum = 0;
+   do {
+      sum += i;
+      i++;
+   } while (i < 10);
+   return sum;
+}
+```
+
+# AST для цикла do-while (do_while.c)
+
+<img width="1213" height="708" alt="image" src="https://github.com/user-attachments/assets/0c0cd884-4f66-48ac-aa18-ab3e1f6690cc" />
 
 
+# Задания:
+1. Получите IR для -O0.
+2. Получите IR для -O2. Какие оптимизации применены?
+3. Примените -loop-unroll и -loop-rotate.
+4. Постройте CFG.
+5. Укажите в чем отличие do-while от while в IR.
+
+---
+
+# Задание №1 - Получите IR для -O0.
+Команда
+```bash
+clang -O0 -S -emit-llvm do_while.c -o do_while_O0.ll
+```
+
+Результат:
+
+<img width="1915" height="1075" alt="image" src="https://github.com/user-attachments/assets/df7b4f5a-cb29-4d14-9d6b-9083769d265a" />
+
+# Задание №2 - Получите IR для -O2. Какие оптимизации применены?
+Команда
+```bash
+clang -O2 -S -emit-llvm do_while.c -o do_while_O2.ll
+```
+
+Результат:
+
+<img width="1914" height="632" alt="image" src="https://github.com/user-attachments/assets/4a531264-a4d4-4a36-b065-688381068115" />
+
+---
+Примененные оптимизации:
+1. Переменные alloca были полностью удалены, так как компилятор избавился от лишних обращений к памяти стека;
+2. Код переведён в чистую SSA-форму, а все промежуточные вычисления развернуты на этапе компиляции (Constant Folding);
+3. Цикл и его управляющие конструкции были полностью уничтожены, поскольку компилятор заранее вычислил итоговый результат выполнения цикла;
+4. Поток управления стал линейным и сократился до одного базового блока, содержащего только инструкцию возврата значения ret i32 45.
+
+
+# Задание №3 - Примените -loop-unroll и -loop-rotate.
+
+-loop-rotate - эта оптимизация превращает цикл do-while в конструкцию, где проверка условия переносится в конец, уменьшая количество переходов.
+
+Команда 
+```bash
+opt -passes=loop-rotate do_while_00.ll -S -o do_while_rotate.ll
+```
+
+Результат:
+
+<img width="1922" height="1080" alt="image" src="https://github.com/user-attachments/assets/4fecbeeb-89fa-4155-bf8e-6dfe365f458d" />
+
+---
+
+-loop-unroll - эта оптимизация дублирует тело цикла, чтобы уменьшить накладные расходы на инкремент счетчика и проверку условий.
+
+Команда
+```bash
+opt -passes=loop-unroll do_while_00.ll -S -o do_while_unroll.ll
+```
+
+Результат:
+
+<img width="1913" height="1073" alt="image" src="https://github.com/user-attachments/assets/50ad54e8-b9ce-4d4b-8197-65d779ca33ee" />
+
+---
+
+# -loop-rotate
+
+После применения оптимизации loop-rotate произошли следующие изменения:
+- Переменные alloca были удалены, а код полностью переведён в чистую SSA-форму с использованием phi-инструкций (%.01 и %.0);
+- Структура цикла была повернута - проверка условия (icmp slt) и условный переход (br i1 %.5) теперь находятся в блоке 4;
+- Количество условных переходов уменьшилось - благодаря переносу условия вниз, переход на новую итерацию происходит быстрее, что оптимизирует поток управления для процессора.
+
+# -loop-unroll
+
+После применения оптимизации loop-unroll произошли следующие изменения:
+- Цикл был полностью развернут, так как количество итераций (10) было статически известно на этапе компиляции;
+- Управляющие инструкции цикла были удалены - из кода полностью исчезли операции инкремента счетчика цикла (add), инструкции сравнения (icmp) и условные переходы (br i1);
+- Поток управления превратился в линейную цепочку базовых блоков, последовательно передающих управление друг другу с помощью безусловных переходов (br label);
+- Вычисления были оптимизированы до константы - в финальном базовом блоке возвращается готовый результат ret i32 45, вычисленный компилятором заранее.
+
+# Задание №4 - Постройте CFG.
+Граф потока управления до оптимизации (O0):
+```bash
+opt -passes=dot-cfg -disable-output do_while_O0.ll
+dot -Tpng .main.dot -o do_while_O0.png
+```
+---
+Граф потока управления после оптимизации (O2):
+```bash
+opt -passes=dot-cfg -disable-output do_while_O2.ll
+dot -Tpng .main.dot -o do_while_O2.png
+```
+---
+Граф потока управления -loop-rotate:
+```bash
+opt -passes=dot-cfg -disable-output do_while_rotate.ll
+dot -Tpng .main.dot -o do_while_rotate.png
+```
+---
+Граф потока управления -loop-unroll:
+```bash
+opt -passes=dot-cfg -disable-output do_while_unroll.ll
+dot -Tpng .main.dot -o do_while_unroll.png
+```
+
+---
+# Результаты:
+
+
+# До оптимизации (O0) - do_while_O0.png
+
+<img width="605" height="909" alt="image" src="https://github.com/user-attachments/assets/21e9aeaf-18eb-4592-972f-cabe4aee9b11" />
+
+---
+
+# После оптимизации (O2) - do_while_O2.png
+
+# <img width="479" height="444" alt="image" src="https://github.com/user-attachments/assets/b175682a-776e-43a5-842c-765cdef9f577" />
+
+---
+
+# -loop-rotate - do_while_rotate.png
+
+<img width="820" height="692" alt="image" src="https://github.com/user-attachments/assets/f9ba4a20-5d87-4074-88b0-511f4e56437b" />
+
+---
+
+# -loop-unroll - do_while_unroll.png
+
+<img width="515" height="1012" alt="image" src="https://github.com/user-attachments/assets/4940152c-a21c-4819-bed5-49be135bdbe3" />
+
+
+# Задание №5 - Укажите в чем отличие do-while от while в IR.
+Сравнительный анализ циклов while и do-while в LLVM IR
+На уровне промежуточного представления (IR) без оптимизаций структуры этих циклов имеют принципиальные различия в организации потока управления:
+Расположение блока проверки условия:
+В цикле while блок проверки условия (cond) находится перед телом цикла. Входной базовый блок функции сначала делает безусловный переход (br) на проверку, и только потом управление может перейти к телу.
+В цикле do-while блок проверки условия находится после тела цикла. Входной блок сразу передает управление напрямую в тело цикла (loop body), гарантируя его выполнение как минимум один раз.
+Количество и связи базовых блоков (Basic Blocks):
+Для while граф содержит обратную связь (петлю) из конца тела цикла назад в блок проверки. Если условие ложно при первом входе, тело цикла полностью обходится по стрелке cond -> exit.
+Для do-while обратная связь идет из блока проверки назад в начало тела цикла. Стрелки обхода тела «снаружи» не существует.
+Инструкции условного перехода (br i1):
+В while условный переход терминирует блок проверки и решает: идти в тело цикла или выйти из него.
+В do-while условный переход терминирует блок проверки в самом конце итерации и решает: вернуться на новую итерацию в тело цикла или выйти.
