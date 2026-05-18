@@ -1037,6 +1037,7 @@ CFG - это ориентированный граф функции, где:
 
 # Дополнительное задание: 
 
-<img width="1919" height="1015" alt="image" src="https://github.com/user-attachments/assets/038e3a23-904d-44f8-8b83-ff78e85e8d9c" />
+<img width="1919" height="1021" alt="image" src="https://github.com/user-attachments/assets/e85757de-baaa-4521-b25d-a7b6c2d1fbf8" />
+
 
 
