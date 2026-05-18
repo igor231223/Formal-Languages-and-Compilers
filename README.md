@@ -1055,24 +1055,11 @@ CFG - это ориентированный граф функции, где:
 
 **Входной IR** (до оптимизации 1):
 
-| № | op | arg1 | arg2 | result |
-|---|-----|--------|------|--------|
-| 1 | label | L_body | | |
-| 2 | + | number | 1 | t1 |
-| 3 | = | t1 | | number |
-| 4 | label | L_cond | | |
-| 5 | < | number | 5 | t2 |
-| 6 | if_true | t2 | | L_body |
+<img width="412" height="260" alt="image" src="https://github.com/user-attachments/assets/2e18bbcb-1fc9-41f8-af53-1051e31a1a42" />
 
 **Выходной IR** (после оптимизации 1):
 
-| № | op | arg1 | arg2 | result |
-|---|-----|--------|------|--------|
-| 1 | label | L_body | | |
-| 2 | + | number | 1 | number |
-| 3 | label | L_cond | | |
-| 4 | < | number | 5 | t2 |
-| 5 | if_true | t2 | | L_body |
+<img width="397" height="235" alt="image" src="https://github.com/user-attachments/assets/e16f7533-165c-4660-a821-bffcd6c20df5" />
 
 Изменения: строки 2–3 объединены в одну строку 2; t1 больше не нужна. Условие цикла пока без изменений.
 
@@ -1098,22 +1085,11 @@ CFG - это ориентированный граф функции, где:
 
 **Входной IR** (до оптимизации 2):
 
-| № | op | arg1 | arg2 | result |
-|---|-----|--------|------|--------|
-| 1 | label | L_body | | |
-| 2 | + | number | 1 | number |
-| 3 | label | L_cond | | |
-| 4 | < | number | 5 | t2 |
-| 5 | if_true | t2 | | L_body |
+<img width="397" height="235" alt="image" src="https://github.com/user-attachments/assets/bbbeb974-47d1-4512-8862-b4da2f8805d4" />
 
 **Выходной IR** (после оптимизации 2):
 
-| № | op | arg1 | arg2 | result |
-|---|-----|--------|------|--------|
-| 1 | label | L_body | | |
-| 2 | + | number | 1 | number |
-| 3 | label | L_cond | | |
-| 4 | if_< | number | 5 | L_body |
+<img width="375" height="187" alt="image" src="https://github.com/user-attachments/assets/357e5f10-b589-4561-8a5a-eb3914e4292b" />
 
 Изменения: строки 4–5 заменены одной строкой 4; t2 удалена, переход к L_body выполняется сразу по сравнению.
 
